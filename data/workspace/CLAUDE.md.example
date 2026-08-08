@@ -1,0 +1,15 @@
+# Project context for Claude Code (copy to your repo root as CLAUDE.md)
+
+## Stack
+
+- code-box: KasmVNC desktop with Cursor IDE, VS Code, and Claude Code CLI
+- Access: http://localhost:3000 (or http://<host-ip>:3000 on your LAN)
+
+## Conventions
+
+- Match existing code style in each project directory
+- Secrets in `.env` files (gitignored), never commit credentials
+
+## This workspace
+
+Projects live under `/workspace` inside code-box (`./data/workspace/` on the host).

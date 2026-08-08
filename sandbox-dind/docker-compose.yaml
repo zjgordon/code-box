@@ -1,0 +1,46 @@
+# Sibling Docker-in-Docker under Sysbox — isolated from the host Docker socket.
+# Requires Sysbox on the host (sysbox-runc). See docs/sandbox-docker.md.
+#
+# Bring-up (from repo root):
+#   ./scripts/generate-dind-certs.sh
+#   docker compose -f sandbox-dind/docker-compose.yaml up -d
+
+services:
+  sandbox-dind:
+    image: docker:dind
+    container_name: sandbox-dind
+    runtime: sysbox-runc
+    restart: unless-stopped
+    # No --privileged — Sysbox provides the isolation model.
+    command:
+      - dockerd
+      - --host=tcp://0.0.0.0:2376
+      - --host=unix:///var/run/docker.sock
+      - --tlsverify
+      - --tlscacert=/certs/ca.pem
+      - --tlscert=/certs/server-cert.pem
+      - --tlskey=/certs/server-key.pem
+    environment:
+      # Disable dockerd entrypoint auto-cert generation; we mount prebaked PEMs.
+      DOCKER_TLS_CERTDIR: ""
+    volumes:
+      - ../certs/server:/certs:ro
+      - dind-storage:/var/lib/docker
+    networks:
+      - sandbox-net
+    # No host port publish — reachable only on sandbox-net.
+    deploy:
+      resources:
+        limits:
+          memory: ${SANDBOX_DIND_MEMORY_LIMIT:-8G}
+
+networks:
+  sandbox-net:
+    name: sandbox-net
+    driver: bridge
+    # Not internal: DinD must resolve/pull from registries (Docker Hub, etc.).
+    # Isolation is still via a dedicated network + separate daemon/TLS/Sysbox —
+    # do not attach Traefik/Gitea/lab services to this network.
+
+volumes:
+  dind-storage:

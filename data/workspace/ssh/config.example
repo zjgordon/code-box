@@ -1,0 +1,20 @@
+# Example SSH config for Git hosts.
+# Copy entries into ~/.ssh/config and adjust Host/HostName/Port.
+#
+# Generate a key inside code-box:
+#   ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519
+# Then add the public key to your Git forge (GitHub, GitLab, Gitea, etc.).
+
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_ed25519
+    IdentitiesOnly yes
+
+# Example for a self-hosted Git forge on a non-standard SSH port:
+# Host git.example.com
+#     HostName git.example.com
+#     Port 2222
+#     User git
+#     IdentityFile ~/.ssh/id_ed25519
+#     IdentitiesOnly yes

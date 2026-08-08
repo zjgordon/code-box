@@ -1,0 +1,54 @@
+# code-box — browser-accessible XFCE desktop with Cursor IDE, VS Code, and Claude Code.
+#
+# Default install: HTTP on the local host or LAN (port 3000).
+#
+# Bootstrap:
+#   1. cp .env.example .env   # set CODE_BOX_USER and CODE_BOX_PASSWORD
+#   2. docker compose build && docker compose up -d
+#   3. http://localhost:3000 — KasmVNC login (or http://<host-ip>:3000 on your LAN)
+#   4. Terminal: claude login  (OAuth via Firefox; use manual flow if callback fails)
+#
+# Cursor updates: scripts/update-cursor.sh or bump CURSOR_VERSION and rebuild
+# (CURSOR_VERSION-only bumps reuse apt/Node/extension layers)
+
+services:
+  code-box:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CURSOR_VERSION: ${CURSOR_VERSION:-3.14}
+        NODE_VERSION: ${NODE_VERSION:-24}
+        NVM_VERSION: ${NVM_VERSION:-0.40.6}
+        CLAUDE_CODE_VERSION: ${CLAUDE_CODE_VERSION:-2.1.220}
+    image: local/code-box:${CURSOR_VERSION:-3.14}
+    container_name: code-box
+    restart: unless-stopped
+
+    security_opt:
+      - seccomp=unconfined
+
+    # Electron/Firefox benefit from a larger /dev/shm than the Docker default (64MB)
+    shm_size: ${CODE_BOX_SHM_SIZE:-1gb}
+
+    ports:
+      - "${CODE_BOX_PORT:-3000}:3000"
+
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TITLE: code-box
+      CUSTOM_USER: ${CODE_BOX_USER:?Set CODE_BOX_USER in .env}
+      PASSWORD: ${CODE_BOX_PASSWORD:?Set CODE_BOX_PASSWORD in .env}
+      FM_HOME: /workspace
+      LC_ALL: en_US.UTF-8
+
+    volumes:
+      - ./data/config:/config
+      - ./data/workspace:/workspace
+
+    deploy:
+      resources:
+        limits:
+          memory: ${CODE_BOX_MEMORY_LIMIT:-16G}
+          cpus: "${CODE_BOX_CPUS:-8.0}"

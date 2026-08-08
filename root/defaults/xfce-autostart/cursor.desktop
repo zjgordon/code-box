@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Cursor
+Comment=Cursor IDE
+Exec=/usr/bin/cursor --no-sandbox --disable-gpu --disable-dev-shm-usage
+StartupNotify=true
+Terminal=false

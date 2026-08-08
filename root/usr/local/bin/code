@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Container-safe VS Code launcher: shared extensions + Electron flags for KasmVNC.
+set -euo pipefail
+
+CODE_BIN="${CODE_BIN:-/usr/share/code/bin/code}"
+EXT_DIR="${VSCODE_EXTENSIONS_DIR:-/opt/vscode-extensions}"
+
+if [[ ! -x "$CODE_BIN" ]]; then
+  echo "ERROR: VS Code binary not found at $CODE_BIN" >&2
+  exit 1
+fi
+
+exec "$CODE_BIN" \
+  --extensions-dir "$EXT_DIR" \
+  --no-sandbox \
+  --disable-gpu \
+  --disable-dev-shm-usage \
+  "$@"

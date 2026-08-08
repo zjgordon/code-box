@@ -1,0 +1,25 @@
+# Overlay: attach code-box to the Sysbox DinD sibling over TLS.
+# Default `docker compose up` is unchanged — use this file only when enabling the sandbox.
+#
+# Prerequisite: sandbox-dind stack is up (creates external network `sandbox-net`).
+#   docker compose -f sandbox-dind/docker-compose.yaml up -d
+#   docker compose -f docker-compose.yaml -f docker-compose.sandbox.yaml up -d
+#
+# See docs/sandbox-docker.md.
+
+services:
+  code-box:
+    environment:
+      DOCKER_HOST: tcp://sandbox-dind:2376
+      DOCKER_TLS_VERIFY: "1"
+      DOCKER_CERT_PATH: /certs/client
+    volumes:
+      - ./certs/client:/certs/client:ro
+    networks:
+      - default
+      - sandbox-net
+
+networks:
+  sandbox-net:
+    external: true
+    name: sandbox-net

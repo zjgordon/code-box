@@ -1,0 +1,26 @@
+.env
+.env.*
+!.env.example
+*.log
+
+# Runtime volume data (template keeps tracked examples only)
+data/config/
+data/workspace/**
+!data/workspace/.gitkeep
+!data/workspace/CLAUDE.md.example
+!data/workspace/ssh/
+!data/workspace/ssh/config.example
+
+# sandbox-dind TLS material (keep certs/README.md)
+certs/**/*.pem
+certs/**/*.key
+certs/**/*.csr
+certs/**/*.srl
+
+# Local overrides / editor / OS
+docker-compose.override.y*ml
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
