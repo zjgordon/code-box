@@ -1,4 +1,4 @@
-# code-box — browser-accessible XFCE desktop with Cursor IDE, VS Code, and Claude Code.
+# code-box — browser-accessible XFCE desktop with Cursor IDE, VS Code, Claude Code, and OpenCode.
 #
 # Default install: HTTP on the local host or LAN (port 3000).
 #
@@ -7,6 +7,7 @@
 #   2. docker compose build && docker compose up -d
 #   3. http://localhost:3000 — KasmVNC login (or http://<host-ip>:3000 on your LAN)
 #   4. Terminal: claude login  (OAuth via Firefox; use manual flow if callback fails)
+#   5. OpenCode TUI: /connect   (configure LLM provider / API key)
 #
 # Cursor updates: scripts/update-cursor.sh or bump CURSOR_VERSION and rebuild
 # (CURSOR_VERSION-only bumps reuse apt/Node/extension layers)
@@ -21,6 +22,7 @@ services:
         NODE_VERSION: ${NODE_VERSION:-24}
         NVM_VERSION: ${NVM_VERSION:-0.40.6}
         CLAUDE_CODE_VERSION: ${CLAUDE_CODE_VERSION:-2.1.220}
+        OPENCODE_VERSION: ${OPENCODE_VERSION:-1.18.18}
     image: local/code-box:${CURSOR_VERSION:-3.14}
     container_name: code-box
     restart: unless-stopped

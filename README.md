@@ -2,7 +2,7 @@
 
 [![Docker](https://img.shields.io/badge/docker-compose-2496ED?logo=docker&logoColor=white)](./docker-compose.yaml)
 
-Browser-accessible coding desktop (XFCE + KasmVNC) with **Cursor**, **VS Code**, **Claude Code**, and sandboxed **Docker**.
+Browser-accessible coding desktop (XFCE + KasmVNC) with **Cursor**, **VS Code**, **Claude Code**, and **OpenCode**. Run it locally over HTTP and open projects in `/workspace`.
 
 ## Requirements
 
@@ -15,7 +15,7 @@ cp .env.example .env   # set CODE_BOX_USER and CODE_BOX_PASSWORD
 docker compose build && docker compose up -d
 ```
 
-Open [http://localhost:3000](http://localhost:3000) (or `http://<host-ip>:3000` on your LAN), sign in, then run `claude login` in a desktop terminal.
+Open [http://localhost:3000](http://localhost:3000) (or `http://<host-ip>:3000` on your LAN), sign in, then run `claude login` in a desktop terminal. For OpenCode, use `/connect` in the TUI to configure an LLM provider.
 
 Optional: set `CODE_BOX_PORT` in `.env` if host port `3000` is taken.
 
@@ -29,7 +29,7 @@ To give the desktop a sandboxed Docker Engine (Sysbox sibling DinD, not the host
 
 - **Releases:** git tags `vMAJOR.MINOR.PATCH` (see [Releases](../../releases))
 - **Image tag:** `local/code-box:<CURSOR_VERSION>` (default `3.14`)
-- **Build pins** (override in `.env`): `CURSOR_VERSION`, `NODE_VERSION`, `NVM_VERSION`, `CLAUDE_CODE_VERSION`
+- **Build pins** (override in `.env`): `CURSOR_VERSION`, `NODE_VERSION`, `NVM_VERSION`, `CLAUDE_CODE_VERSION`, `OPENCODE_VERSION`
 
 ```bash
 scripts/update-cursor.sh

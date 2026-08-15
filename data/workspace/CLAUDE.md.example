@@ -2,7 +2,7 @@
 
 ## Stack
 
-- code-box: KasmVNC desktop with Cursor IDE, VS Code, and Claude Code CLI
+- code-box: KasmVNC desktop with Cursor IDE, VS Code, Claude Code CLI, and OpenCode CLI
 - Access: http://localhost:3000 (or http://<host-ip>:3000 on your LAN)
 
 ## Conventions

@@ -166,6 +166,14 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
        fi \
     && test -x /usr/bin/cursor || (echo "ERROR: cursor missing" && exit 1)
 
+# OpenCode CLI (own layer so OPENCODE_VERSION bumps skip earlier layers)
+ARG OPENCODE_VERSION=1.18.18
+RUN --mount=type=cache,target=/root/.npm \
+    . "$NVM_DIR/nvm.sh" \
+    && npm install -g "opencode-ai@${OPENCODE_VERSION}" \
+    && ln -sf "$(npm prefix -g)/bin/opencode" /usr/local/bin/opencode \
+    && opencode --version
+
 RUN mkdir -p /etc/firefox/policies
 COPY firefox-policies.json /etc/firefox/policies/policies.json
 

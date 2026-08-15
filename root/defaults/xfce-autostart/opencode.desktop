@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=OpenCode
+Comment=OpenCode terminal agent
+Exec=xfce4-terminal --title=OpenCode --command=bash -lc 'cd /workspace && opencode'
+StartupNotify=true
+Terminal=false
