@@ -1,36 +1,34 @@
 # Isolated Docker sandbox (Sysbox DinD)
 
-Optional sibling Docker Engine for agents inside `code-box`, without mounting the host Docker socket.
+Sibling Docker Engine for agents in `code-box`, without the host socket.
 
 ## Architecture
 
-A **sibling** container (`sandbox-dind`) runs `dockerd` under the **Sysbox** runtime (`sysbox-runc`) on a **dedicated** bridge network (`sandbox-net`). `code-box` attaches to that network and talks to the daemon over **TCP + TLS** (`DOCKER_HOST=tcp://sandbox-dind:2376`). Nested container storage lives in a DinD volume, not on the host engine.
+`sandbox-dind` runs `dockerd` under `sysbox-runc` on `sandbox-net`. `code-box` reaches it over TCP + TLS (`DOCKER_HOST=tcp://sandbox-dind:2376`). Nested storage is a DinD volume.
 
 ```
 Host Docker (sysbox-runc)
   ├── code-box          — desktop; Docker CLI only
   └── sandbox-dind      — sandboxed dockerd (Sysbox)
-         shared network: sandbox-net (egress allowed for registry pulls)
+         shared network: sandbox-net (egress for registry pulls)
 ```
 
-**Isolation model:** agents talk only to the sandboxed daemon (not the host Docker socket). `sandbox-net` is a separate Compose network — keep Traefik, Gitea, and other lab stacks off it. The network allows outbound egress so `docker pull` / builds that fetch base images work; it is intentionally **not** `internal: true` (that mode blocks DNS and Hub access, which breaks normal agent workflows).
+Agents talk to this daemon only. Keep Traefik, Gitea, and other lab stacks off `sandbox-net`. The network has egress so pulls and builds work. Further hardening (firewall, HTTP proxy, private registry) is host policy.
 
-Hardening beyond this (firewall rules, HTTP proxy, private registry only) is host/operator policy.
+## Host requirements
 
-## Host requirements (operator-owned)
+Install Sysbox on the Docker host before `sandbox-dind`.
 
-This repo does **not** install Sysbox. You install it on the **host** that runs Docker before bringing up `sandbox-dind`.
+- [Sysbox package install](https://github.com/nestybox/sysbox/blob/master/docs/user-guide/install-package.md)
+- [Releases](https://github.com/nestybox/sysbox/releases) (Ubuntu/Debian `.deb`)
+- [Distro/kernel compatibility](https://github.com/nestybox/sysbox/blob/master/docs/distro-compat.md)
 
-Upstream guide (start here): [Sysbox User Guide: Installation with the Sysbox Package](https://github.com/nestybox/sysbox/blob/master/docs/user-guide/install-package.md). Packages are published on the [Sysbox releases](https://github.com/nestybox/sysbox/releases) page (Ubuntu/Debian `.deb` builds). Distro/kernel compatibility: [distro-compat](https://github.com/nestybox/sysbox/blob/master/docs/distro-compat.md).
-
-### What Sysbox is in this setup
-
-`sandbox-dind` sets `runtime: sysbox-runc`. That tells the **host** Docker engine to start the DinD container with Sysbox instead of plain `runc`. Sysbox is installed at the host level (like another OCI runtime); it is not something you put inside the `code-box` image.
+`sandbox-dind` sets `runtime: sysbox-runc` on the host engine.
 
 ### Install checklist
 
-1. Supported Linux distro with **systemd**, and Docker installed **natively** (not the Snap package — Sysbox does not support Snap Docker; see the upstream guide).
-2. Download a Sysbox CE `.deb` from [releases](https://github.com/nestybox/sysbox/releases) (example for current CE amd64; replace with the version/arch you need):
+1. Linux with systemd; native Docker (Snap is unsupported — see upstream).
+2. Sysbox CE `.deb` from [releases](https://github.com/nestybox/sysbox/releases):
 
    ```bash
    wget https://downloads.nestybox.com/sysbox/releases/v0.7.1/sysbox-ce_0.7.1-0.linux_amd64.deb
@@ -40,64 +38,48 @@ Upstream guide (start here): [Sysbox User Guide: Installation with the Sysbox Pa
    sudo apt-get install ./sysbox-ce_0.7.1-0.linux_amd64.deb
    ```
 
-   The installer may reconfigure/restart Docker so it learns about `sysbox-runc`. On a busy host, read upstream’s notes on installing without restarting Docker and on stopping containers first.
+   The installer may reconfigure Docker. Upstream covers install without restarting Docker and stopping containers first.
 
-3. Confirm Sysbox is running and Docker sees the runtime:
+3. Runtime present:
 
    ```bash
    systemctl status sysbox -n20
    docker info | grep -i runtime
-   # expect: Runtimes: ... sysbox-runc
+   # Runtimes: ... sysbox-runc
    ```
 
-4. Optional on older kernels: [shiftfs / ID-mapped mounts](https://github.com/nestybox/sysbox/blob/master/docs/user-guide/install-package.md#installing-shiftfs-for-linux-kernels--63) (kernels ≥ 6.3 use ID-mapped mounts; shiftfs is mainly for older kernels).
+4. Older kernels: [shiftfs / ID-mapped mounts](https://github.com/nestybox/sysbox/blob/master/docs/user-guide/install-package.md#installing-shiftfs-for-linux-kernels--63) (kernels ≥ 6.3 use ID-mapped mounts).
 
-Gotchas: storage-driver or volume-plugin combos can cause trouble — run `docker info` and read upstream troubleshooting before using this on a critical host. Do **not** set Sysbox as Docker’s default runtime unless you intend every container to use it; this project only needs `runtime: sysbox-runc` on `sandbox-dind`.
-
+Leave Sysbox off Docker’s default runtime; only `sandbox-dind` needs it. Check `docker info` and upstream troubleshooting for storage-driver issues.
 
 ## Prerequisites in this repo
 
-1. Generate TLS material (private CA + server + client):
+```bash
+./scripts/generate-dind-certs.sh
+```
 
-   ```bash
-   ./scripts/generate-dind-certs.sh
-   ```
+PEMs under `certs/` are gitignored. `FORCE=1` rotates the CA and leaves.
 
-   PEMs under `certs/` are gitignored. Set `FORCE=1` to rotate.
+Rebuild if the image lacks the Docker CLI:
 
-2. Rebuild `code-box` so the image includes the Docker CLI (if you have not built since this feature landed):
-
-   ```bash
-   docker compose build
-   ```
+```bash
+docker compose build
+```
 
 ## Bring-up order
 
-Start the sibling first (creates network `sandbox-net`), then `code-box` with the sandbox overlay:
+`sandbox-dind` creates `sandbox-net`, then the overlay:
 
 ```bash
 docker compose -f sandbox-dind/docker-compose.yaml up -d
 docker compose -f docker-compose.yaml -f docker-compose.sandbox.yaml up -d
 ```
 
-Default `docker compose up` (no overlay) is unchanged and does not require the sibling network.
-
-Nested builds compete with the desktop for host RAM: `sandbox-dind` defaults to an **8G** memory limit (`SANDBOX_DIND_MEMORY_LIMIT` in `.env` when compose is run from the repo root). Raise it if large nested builds OOM.
+Default `docker compose up` does not use the sibling. Nested builds share host RAM; default limit is 8G (`SANDBOX_DIND_MEMORY_LIMIT` from the repo root).
 
 ## Inside the desktop
 
-With the overlay active, `docker` / `docker compose` target the sandboxed daemon:
-
-- Build images and run compose stacks for projects under `/workspace`
-- Smoke-test services the agent starts
-- Tear down and iterate
-
-They do **not**:
-
-- Touch the host Docker socket or host containers managed by the host engine
-- Escape Sysbox’s user-namespace model to host root via nested `--privileged` in the usual way Sysbox is designed to prevent
-
-They **can** pull from public registries over `sandbox-net` egress (required for normal `docker run` / builds). Do not attach lab services you want unreachable (Traefik, Gitea, etc.) to `sandbox-net`.
+`docker` / `docker compose` target the sandboxed daemon: build and run stacks under `/workspace`, iterate, tear down. Registry pulls use `sandbox-net` egress.
 
 ## Files
 
@@ -112,9 +94,9 @@ They **can** pull from public registries over `sandbox-net` egress (required for
 
 | Symptom | Check |
 |---------|--------|
-| `network sandbox-net declared as external, but could not be found` | Start `sandbox-dind` before the overlay compose. |
-| `error during connect` / TLS errors | Regenerate certs; confirm `./certs/client` is mounted and `DOCKER_CERT_PATH=/certs/client`. |
-| `lookup registry-1.docker.io ... server misbehaving` / pull failures | Recreate `sandbox-net` after pulling this change (egress must be allowed — see Architecture). Old stacks created with `internal: true` need `docker compose -f sandbox-dind/docker-compose.yaml down` then `up -d` (or remove the old `sandbox-net` network). |
-| `unknown or invalid runtime name: sysbox-runc` | Install Sysbox on the host per the [package install guide](https://github.com/nestybox/sysbox/blob/master/docs/user-guide/install-package.md); confirm `docker info` lists `sysbox-runc`. |
-| `docker: command not found` in desktop | Rebuild the `code-box` image after pulling Dockerfile changes. |
-| Cert CA already exists warning | Expected on re-run; use `FORCE=1` to replace the CA and all leaf certs. |
+| `network sandbox-net declared as external, but could not be found` | Start `sandbox-dind` before the overlay. |
+| `error during connect` / TLS errors | Regenerate certs; `./certs/client` mounted; `DOCKER_CERT_PATH=/certs/client`. |
+| Registry DNS / pull failures | Recreate `sandbox-net` (`docker compose -f sandbox-dind/docker-compose.yaml down` then `up -d`). |
+| `unknown or invalid runtime name: sysbox-runc` | [Package install](https://github.com/nestybox/sysbox/blob/master/docs/user-guide/install-package.md); `docker info` lists `sysbox-runc`. |
+| `docker: command not found` in desktop | Rebuild `code-box`. |
+| Cert CA already exists | Re-run is a no-op; `FORCE=1` replaces the CA and leaves. |

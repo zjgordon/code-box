@@ -1,12 +1,17 @@
 # code-box
 
 [![Docker](https://img.shields.io/badge/docker-compose-2496ED?logo=docker&logoColor=white)](./docker-compose.yaml)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](./LICENSE)
 
-Browser-accessible coding desktop (XFCE + KasmVNC) with **Cursor**, **VS Code**, **Claude Code**, and **OpenCode**. Run it locally over HTTP and open projects in `/workspace`.
+Wanted to play with all the fun stuff in as much of a walled garden as possible. Full dev box in a browser (**XFCE** + **KasmVNC**) with **isolated Docker** and  **Cursor**, **VS Code**, **Claude Code**, and **OpenCode**. Optional **Ollama** container to host a local LLM for **OpenCode**. Run it locally over HTTP and open projects in `/workspace`.
+
+![code-box desktop](docs/img/code-box-screenshot.jpg)
 
 ## Requirements
 
 - Docker Engine with Compose v2
+
+Isolated Docker requires [Sysbox](docs/sandbox-docker.md) on the host. Ollama GPU requires NVIDIA drivers and the [Container Toolkit](docs/ollama.md).
 
 ## Quick start
 
@@ -15,7 +20,7 @@ cp .env.example .env   # set CODE_BOX_USER and CODE_BOX_PASSWORD
 docker compose build && docker compose up -d
 ```
 
-Open [http://localhost:3000](http://localhost:3000) (or `http://<host-ip>:3000` on your LAN), sign in, then run `claude login` in a desktop terminal. For OpenCode, use `/connect` in the TUI to configure an LLM provider.
+Open [http://localhost:3000](http://localhost:3000) (or `http://<host-ip>:3000` on your LAN), sign in, then run `claude login` in a desktop terminal. For OpenCode, use `/connect` in the TUI to configure an LLM provider. For other layouts (LAN reverse proxy, HTTPS on a personal server), see [docs/deployment_examples.md](docs/deployment_examples.md).
 
 Optional: set `CODE_BOX_PORT` in `.env` if host port `3000` is taken.
 
