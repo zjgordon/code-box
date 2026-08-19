@@ -2,6 +2,7 @@
 
 [![Docker](https://img.shields.io/badge/docker-compose-2496ED?logo=docker&logoColor=white)](./docker-compose.yaml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](./LICENSE)
+[![Release](https://img.shields.io/github/v/release/zjgordon/code-box)](https://github.com/zjgordon/code-box/releases)
 
 Wanted to play with all the fun stuff in as much of a walled garden as possible. Full dev box in a browser (**XFCE** + **KasmVNC**) with **isolated Docker** and  **Cursor**, **VS Code**, **Claude Code**, and **OpenCode**. Optional **Ollama** container to host a local LLM for **OpenCode**. Run it locally over HTTP and open projects in `/workspace`.
 
