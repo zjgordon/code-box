@@ -1,0 +1,42 @@
+# Overlay: optional Ollama sibling as a local model host for OpenCode.
+# Default `docker compose up` is unchanged — use this file only when enabling Ollama.
+#
+# CPU / no NVIDIA toolkit (this overlay alone):
+#   docker compose -f docker-compose.yaml -f docker-compose.ollama.yaml up -d
+#
+# NVIDIA GPU (host must have drivers + NVIDIA Container Toolkit):
+#   docker compose -f docker-compose.yaml -f docker-compose.ollama.yaml -f docker-compose.ollama.gpu.yaml up -d
+#
+# See docs/ollama.md.
+
+services:
+  ollama:
+    image: ollama/ollama:${OLLAMA_VERSION:-0.32.14}
+    container_name: ollama
+    restart: unless-stopped
+    environment:
+      # Listen on all interfaces inside the container so code-box can reach
+      # http://ollama:11434 (the image default of 127.0.0.1 would not).
+      OLLAMA_HOST: 0.0.0.0:11434
+    volumes:
+      - ollama:/root/.ollama
+    ports:
+      - "127.0.0.1:${OLLAMA_HOST_PORT:-11434}:11434"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: ${OLLAMA_MEMORY_LIMIT:-8G}
+
+  code-box:
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+volumes:
+  ollama:

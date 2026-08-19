@@ -25,6 +25,10 @@ Resources (defaults work for agent/desktop use; override in `.env`): `CODE_BOX_M
 
 To give the desktop a sandboxed Docker Engine (Sysbox sibling DinD, not the host socket), see [docs/sandbox-docker.md](docs/sandbox-docker.md).
 
+## Optional: Ollama
+
+To host a local model for OpenCode (optional sibling container; NVIDIA GPU is a second overlay), see [docs/ollama.md](docs/ollama.md).
+
 ## Versioning
 
 - **Releases:** git tags `vMAJOR.MINOR.PATCH` (see [Releases](../../releases))

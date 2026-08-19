@@ -8,6 +8,7 @@ data/config/
 data/workspace/**
 !data/workspace/.gitkeep
 !data/workspace/CLAUDE.md.example
+!data/workspace/opencode.json.example
 !data/workspace/ssh/
 !data/workspace/ssh/config.example
 
