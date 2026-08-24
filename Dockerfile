@@ -14,7 +14,7 @@ RUN rm -f /etc/apt/apt.conf.d/docker-clean \
     && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' \
          > /etc/apt/apt.conf.d/keep-cache
 
-# Mozilla + Microsoft + Docker APT repos (CLI only; engine is the Sysbox sibling)
+# Mozilla + Microsoft + Docker + GitHub CLI APT repos (Docker CLI only; engine is the Sysbox sibling)
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update \
@@ -32,8 +32,15 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         | gpg --dearmor -o /etc/apt/keyrings/docker.gpg \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bookworm stable" \
         > /etc/apt/sources.list.d/docker.list \
+    && wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+        | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg >/dev/null \
+    && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+        > /etc/apt/sources.list.d/github-cli.list \
     && printf 'Package: firefox*\nPin: origin packages.mozilla.org\nPin-Priority: 1000\n' \
-        > /etc/apt/preferences.d/mozilla-firefox
+        > /etc/apt/preferences.d/mozilla-firefox \
+    && printf 'Package: gh\nPin: origin cli.github.com\nPin-Priority: 1001\n' \
+        > /etc/apt/preferences.d/github-cli
 
 # Desktop + agent tooling (includes VS Code package; extensions installed later)
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -57,7 +64,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         firefox \
         fonts-jetbrains-mono \
         fzf \
+        gh \
         git \
+        git-lfs \
         gnupg \
         hicolor-icon-theme \
         jq \
@@ -80,6 +89,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         ripgrep \
         rsync \
         sqlite3 \
+        ssh-askpass \
         thunar \
         thunar-archive-plugin \
         tmux \
@@ -103,8 +113,25 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         update-alternatives --set gnome-www-browser /usr/bin/firefox 2>/dev/null; true) \
     && command -v code >/dev/null \
     && command -v docker >/dev/null \
+    && command -v gh >/dev/null \
+    && command -v git-lfs >/dev/null \
     && test -x /usr/bin/firefox \
-        || (echo "ERROR: firefox, code, or docker CLI missing" && exit 1)
+        || (echo "ERROR: firefox, code, docker CLI, gh, or git-lfs missing" && exit 1) \
+    && git lfs install --system \
+    && printf '%s\n' \
+        '# GitHub SSH host keys: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints' \
+        'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' \
+        'github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=' \
+        'github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=' \
+        'ssh.github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' \
+        'ssh.github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=' \
+        'ssh.github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=' \
+        '[ssh.github.com]:443 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' \
+        '[ssh.github.com]:443 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=' \
+        '[ssh.github.com]:443 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=' \
+        > /etc/ssh/ssh_known_hosts \
+    && grep -q 'github.com ssh-ed25519' /etc/ssh/ssh_known_hosts \
+    && grep -q 'ssh.github.com ssh-ed25519' /etc/ssh/ssh_known_hosts
 
 # Node via nvm + pinned Claude Code CLI
 ARG NODE_VERSION=24
@@ -174,6 +201,17 @@ RUN --mount=type=cache,target=/root/.npm \
     && ln -sf "$(npm prefix -g)/bin/opencode" /usr/local/bin/opencode \
     && opencode --version
 
+# GitHub CLI extensions (own layer so extension bumps skip earlier layers)
+# Seeded into $HOME on first desktop start; see /defaults/startwm.sh
+RUN mkdir -p /opt/gh-home /opt/gh-share \
+    && HOME=/opt/gh-home XDG_DATA_HOME=/opt/gh-share \
+         gh extension install dlvhdr/gh-dash \
+    && HOME=/opt/gh-home XDG_DATA_HOME=/opt/gh-share \
+         gh extension install yusukebe/gh-markdown-preview \
+    && test -d /opt/gh-share/gh/extensions/gh-dash \
+    && test -d /opt/gh-share/gh/extensions/gh-markdown-preview \
+    && ls -la /opt/gh-share/gh/extensions
+
 RUN mkdir -p /etc/firefox/policies
 COPY firefox-policies.json /etc/firefox/policies/policies.json
 
@@ -185,4 +223,5 @@ RUN printf '// removed upstream; stub for legacy kclient index.html reference\n'
 
 COPY root/ /
 
-RUN chmod +x /defaults/startwm.sh /usr/local/bin/code
+RUN chmod +x /defaults/startwm.sh /usr/local/bin/code \
+    && echo '[ -f /etc/profile.d/github.sh ] && . /etc/profile.d/github.sh' >> /etc/bash.bashrc

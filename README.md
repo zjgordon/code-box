@@ -21,11 +21,15 @@ cp .env.example .env   # set CODE_BOX_USER and CODE_BOX_PASSWORD
 docker compose build && docker compose up -d
 ```
 
-Open [http://localhost:3000](http://localhost:3000) (or `http://<host-ip>:3000` on your LAN), sign in, then run `claude login` in a desktop terminal. For OpenCode, use `/connect` in the TUI to configure an LLM provider. For other layouts (LAN reverse proxy, HTTPS on a personal server), see [docs/deployment_examples.md](docs/deployment_examples.md).
+Open [http://localhost:3000](http://localhost:3000) (or `http://<host-ip>:3000` on your LAN), sign in, then run `claude login` in a desktop terminal. For OpenCode, use `/connect` in the TUI to configure an LLM provider. To clone and manage GitHub repos over SSH (MFA-compatible), see [docs/github.md](docs/github.md). For other layouts (LAN reverse proxy, HTTPS on a personal server), see [docs/deployment_examples.md](docs/deployment_examples.md).
 
 Optional: set `CODE_BOX_PORT` in `.env` if host port `3000` is taken.
 
 Resources (defaults work for agent/desktop use; override in `.env`): `CODE_BOX_MEMORY_LIMIT` (16G), `CODE_BOX_CPUS` (8.0), `CODE_BOX_SHM_SIZE` (1gb).
+
+## Optional: GitHub
+
+To clone, review, and manage public GitHub repositories from the desktop (`gh`, SSH, MFA, Verified commits), see [docs/github.md](docs/github.md).
 
 ## Optional: isolated Docker
 
