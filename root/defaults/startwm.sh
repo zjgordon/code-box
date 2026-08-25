@@ -17,6 +17,53 @@ if [ -d /opt/gh-share/gh/extensions ]; then
   done
 fi
 
+# Playwright MCP: seed Cursor config if missing; merge into Claude / OpenCode if the key is absent
+if [ ! -f "${HOME}/.cursor/mcp.json" ] && [ -f /defaults/cursor-mcp.json ]; then
+  mkdir -p "${HOME}/.cursor"
+  cp -f /defaults/cursor-mcp.json "${HOME}/.cursor/mcp.json"
+fi
+if command -v jq >/dev/null; then
+  if [ -f "${HOME}/.cursor/mcp.json" ] \
+     && ! jq -e '.mcpServers.playwright' "${HOME}/.cursor/mcp.json" >/dev/null 2>&1; then
+    tmp=$(mktemp)
+    if jq '.mcpServers.playwright = {"command":"/usr/local/bin/playwright-mcp"}' \
+         "${HOME}/.cursor/mcp.json" >"$tmp"; then
+      mv "$tmp" "${HOME}/.cursor/mcp.json"
+    else
+      rm -f "$tmp"
+    fi
+  fi
+
+  claude_json="${HOME}/.claude.json"
+  if [ ! -f "$claude_json" ]; then
+    printf '%s\n' '{"mcpServers":{}}' >"$claude_json"
+  fi
+  if ! jq -e '.mcpServers.playwright' "$claude_json" >/dev/null 2>&1; then
+    tmp=$(mktemp)
+    if jq '.mcpServers.playwright = {"command":"/usr/local/bin/playwright-mcp"}' \
+         "$claude_json" >"$tmp"; then
+      mv "$tmp" "$claude_json"
+    else
+      rm -f "$tmp"
+    fi
+  fi
+
+  oc_json="${HOME}/.config/opencode/opencode.json"
+  mkdir -p "${HOME}/.config/opencode"
+  if [ ! -f "$oc_json" ]; then
+    printf '%s\n' '{"$schema":"https://opencode.ai/config.json"}' >"$oc_json"
+  fi
+  if ! jq -e '.mcp.playwright' "$oc_json" >/dev/null 2>&1; then
+    tmp=$(mktemp)
+    if jq '.mcp.playwright = {"type":"local","command":["/usr/local/bin/playwright-mcp"],"enabled":true}' \
+         "$oc_json" >"$tmp"; then
+      mv "$tmp" "$oc_json"
+    else
+      rm -f "$tmp"
+    fi
+  fi
+fi
+
 if command -v xdg-settings &>/dev/null; then
   xdg-settings set default-web-browser firefox.desktop 2>/dev/null || true
 fi

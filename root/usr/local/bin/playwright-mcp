@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Playwright MCP for Cursor / Claude Code / OpenCode.
+# Headless Chromium + --no-sandbox: Docker cannot use the Chromium sandbox.
+# Cursor is a GUI app and does not load nvm; this wrapper sources it.
+set -euo pipefail
+
+export NVM_DIR="${NVM_DIR:-/opt/nvm}"
+if [ -f /etc/profile.d/nvm.sh ]; then
+  # shellcheck disable=SC1091
+  . /etc/profile.d/nvm.sh
+fi
+
+export PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-/opt/ms-playwright}"
+export PLAYWRIGHT_MCP_NO_SANDBOX="${PLAYWRIGHT_MCP_NO_SANDBOX:-1}"
+
+REAL="$(npm prefix -g)/bin/playwright-mcp"
+if [ ! -x "$REAL" ]; then
+  echo "ERROR: Playwright MCP CLI not found at $REAL" >&2
+  exit 1
+fi
+
+exec "$REAL" --headless --browser chromium --no-sandbox "$@"

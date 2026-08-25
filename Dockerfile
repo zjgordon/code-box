@@ -212,6 +212,27 @@ RUN mkdir -p /opt/gh-home /opt/gh-share \
     && test -d /opt/gh-share/gh/extensions/gh-markdown-preview \
     && ls -la /opt/gh-share/gh/extensions
 
+# Playwright MCP + Chromium (own layer so PLAYWRIGHT_MCP_VERSION bumps skip earlier layers)
+# Shared by Cursor, Claude Code, and OpenCode via /usr/local/bin/playwright-mcp
+ARG PLAYWRIGHT_MCP_VERSION=0.0.79
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    --mount=type=cache,target=/root/.npm \
+    . "$NVM_DIR/nvm.sh" \
+    && npm install -g "@playwright/mcp@${PLAYWRIGHT_MCP_VERSION}" \
+    && MCP_DIR="$(npm prefix -g)/lib/node_modules/@playwright/mcp" \
+    && PW_CLI="$(find "$MCP_DIR" -path '*/playwright-core/cli.js' | head -1)" \
+    && test -n "$PW_CLI" -a -f "$PW_CLI" \
+    && export DEBIAN_FRONTEND=noninteractive \
+    && mkdir -p "$PLAYWRIGHT_BROWSERS_PATH" \
+    && node "$PW_CLI" install-deps chromium \
+    && node "$PW_CLI" install chromium \
+    && chmod -R a+rX "$PLAYWRIGHT_BROWSERS_PATH" \
+    && test -x "$(npm prefix -g)/bin/playwright-mcp" \
+    && test -d "$PLAYWRIGHT_BROWSERS_PATH" \
+    && ls "$PLAYWRIGHT_BROWSERS_PATH"
+
 RUN mkdir -p /etc/firefox/policies
 COPY firefox-policies.json /etc/firefox/policies/policies.json
 
@@ -223,5 +244,5 @@ RUN printf '// removed upstream; stub for legacy kclient index.html reference\n'
 
 COPY root/ /
 
-RUN chmod +x /defaults/startwm.sh /usr/local/bin/code \
+RUN chmod +x /defaults/startwm.sh /usr/local/bin/code /usr/local/bin/playwright-mcp \
     && echo '[ -f /etc/profile.d/github.sh ] && . /etc/profile.d/github.sh' >> /etc/bash.bashrc
