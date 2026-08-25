@@ -4,17 +4,20 @@ Optional sibling [Ollama](https://ollama.com) for OpenCode. Default `docker comp
 
 ## Architecture
 
-Ollama is on the default Compose network. From the desktop: `http://ollama:11434` (OpenAI-compatible `http://ollama:11434/v1`). Models live in a named volume. Host bind is `127.0.0.1:11434`. Leave Ollama off `sandbox-net`; `code-box` reaches it on the default network when both overlays are up.
+Ollama and `code-box` share a dedicated Compose network `ollama-net`. From the desktop: `http://ollama:11434` (OpenAI-compatible `http://ollama:11434/v1`). A loopback proxy also serves `http://127.0.0.1:11434` inside `code-box` so OpenCode’s default discovery works. Models live in a named volume. Host bind is `127.0.0.1:11434`. Leave Ollama off `sandbox-net`; `code-box` reaches it on `ollama-net` when both overlays are up.
 
 ```
 Host Docker
-  ├── code-box     — desktop; OpenCode at http://ollama:11434/v1
-  └── ollama       — model host (CPU, or NVIDIA via extra overlay)
-         shared network: default Compose network
+  ├── code-box                 — desktop; OpenCode at http://ollama:11434/v1
+  │     └── ollama-localhost-proxy  — 127.0.0.1:11434 → ollama:11434
+  └── ollama                   — model host (CPU, or NVIDIA via extra overlay)
+         shared network: ollama-net
          host bind: 127.0.0.1:11434
 ```
 
 The base overlay is CPU. `docker-compose.ollama.gpu.yaml` adds NVIDIA device reservations.
+
+Apply every overlay you need in **one** `docker compose` invocation (same project). A separate `docker run --name ollama` or a second Compose project will not join `ollama-net`, and `http://ollama:11434` will fail from the desktop.
 
 ## Host requirements
 
@@ -74,7 +77,22 @@ With sandbox (start `sandbox-dind` first; [sandbox-docker.md](sandbox-docker.md)
 docker compose -f docker-compose.yaml -f docker-compose.sandbox.yaml -f docker-compose.ollama.yaml up -d
 ```
 
+Sandbox + NVIDIA GPU (all overlays in one project):
+
+```bash
+docker compose -f docker-compose.yaml -f docker-compose.sandbox.yaml -f docker-compose.ollama.yaml -f docker-compose.ollama.gpu.yaml up -d
+```
+
+To make that the default for `docker compose up`, set `COMPOSE_FILE` in `.env` (see `.env.example`).
+
 `code-box` waits until Ollama is healthy. Default memory limit is 8G (`OLLAMA_MEMORY_LIMIT`). Pin `OLLAMA_VERSION` or `OLLAMA_HOST_PORT` in `.env`. If the host already binds 11434, set `OLLAMA_HOST_PORT` to a free loopback port; Compose DNS remains `ollama:11434`.
+
+From inside `code-box`, both of these should list models:
+
+```bash
+curl -sS http://ollama:11434/api/tags
+curl -sS http://127.0.0.1:11434/api/tags
+```
 
 ## Acquire a model
 
@@ -114,6 +132,8 @@ cp /workspace/opencode.json.example /config/.config/opencode/opencode.json
 }
 ```
 
+`http://ollama:11434/v1` is the Compose DNS URL. The loopback proxy also makes the stock `http://localhost:11434/v1` work from the desktop.
+
 If the TUI asks for a key: `/connect` → Other → provider id `ollama` → any non-empty string.
 
 Upstream: [OpenCode providers](https://opencode.ai/docs/providers/), [Ollama ↔ OpenCode](https://docs.ollama.com/integrations/opencode).
@@ -122,7 +142,7 @@ Upstream: [OpenCode providers](https://opencode.ai/docs/providers/), [Ollama ↔
 
 | Path | Role |
 |------|------|
-| [`docker-compose.ollama.yaml`](../docker-compose.ollama.yaml) | Overlay: Ollama sibling + healthcheck + loopback port |
+| [`docker-compose.ollama.yaml`](../docker-compose.ollama.yaml) | Overlay: Ollama sibling, `ollama-net`, loopback proxy, healthcheck, host loopback port |
 | [`docker-compose.ollama.gpu.yaml`](../docker-compose.ollama.gpu.yaml) | Overlay: NVIDIA GPU reservations |
 | [`data/workspace/opencode.json.example`](../data/workspace/opencode.json.example) | OpenCode provider stub (`http://ollama:11434/v1`) |
 
@@ -131,7 +151,7 @@ Upstream: [OpenCode providers](https://opencode.ai/docs/providers/), [Ollama ↔
 | Symptom | Check |
 |---------|--------|
 | `could not select device driver nvidia` | Toolkit on the host; GPU overlay only with NVIDIA. |
-| Connection refused | Overlay in the `-f` list; `docker exec ollama ollama list`; OpenCode `baseURL` `http://ollama:11434/v1`. |
+| Connection refused / no API from the desktop | All overlays in **one** `docker compose -f …` project (not a separate `docker run --name ollama`). `docker exec code-box getent hosts ollama`. `docker exec code-box curl -sS http://ollama:11434/api/tags`. OpenCode `baseURL` `http://ollama:11434/v1` (or `http://localhost:11434/v1` via the proxy). `docker network inspect` that `code-box` is on `ollama-net` and `ollama` is not on `sandbox-net`. |
 | Model missing from the OpenCode picker | Exact `ollama list` tag under `provider.ollama.models`; restart the TUI. |
 | OOM / container killed | Raise `OLLAMA_MEMORY_LIMIT` or use a smaller model. |
 | `curl: (7) Failed to connect` from the host | Loopback only: `http://127.0.0.1:11434` (or `OLLAMA_HOST_PORT`), or `docker exec`. |

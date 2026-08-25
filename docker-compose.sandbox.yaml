@@ -16,8 +16,8 @@ services:
     volumes:
       - ./certs/client:/certs/client:ro
     networks:
-      - default
-      - sandbox-net
+      default: {}
+      sandbox-net: {}
 
 networks:
   sandbox-net:

@@ -7,6 +7,9 @@
 # NVIDIA GPU (host must have drivers + NVIDIA Container Toolkit):
 #   docker compose -f docker-compose.yaml -f docker-compose.ollama.yaml -f docker-compose.ollama.gpu.yaml up -d
 #
+# Sandbox + GPU (start sandbox-dind first; all -f files in one project):
+#   docker compose -f docker-compose.yaml -f docker-compose.sandbox.yaml -f docker-compose.ollama.yaml -f docker-compose.ollama.gpu.yaml up -d
+#
 # See docs/ollama.md.
 
 services:
@@ -18,10 +21,14 @@ services:
       # Listen on all interfaces inside the container so code-box can reach
       # http://ollama:11434 (the image default of 127.0.0.1 would not).
       OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_ORIGINS: "*"
     volumes:
       - ollama:/root/.ollama
     ports:
       - "127.0.0.1:${OLLAMA_HOST_PORT:-11434}:11434"
+    networks:
+      ollama-net:
+        aliases: [ollama]
     healthcheck:
       test: ["CMD", "ollama", "list"]
       interval: 10s
@@ -33,10 +40,34 @@ services:
         limits:
           memory: ${OLLAMA_MEMORY_LIMIT:-8G}
 
-  code-box:
+  # OpenCode discovers Ollama at 127.0.0.1:11434. Bind loopback only so nested
+  # DinD on sandbox-net cannot reach the API via code-box's sandbox IP.
+  ollama-localhost-proxy:
+    image: alpine/socat
+    container_name: ollama-localhost-proxy
+    restart: unless-stopped
+    network_mode: "service:code-box"
+    command: ["TCP-LISTEN:11434,bind=127.0.0.1,fork,reuseaddr", "TCP:ollama:11434"]
     depends_on:
       ollama:
         condition: service_healthy
+      code-box:
+        condition: service_started
+
+  code-box:
+    environment:
+      # Client URL for OpenCode and other tools inside the desktop.
+      # (Distinct from OLLAMA_HOST on the ollama service, which is the listen address.)
+      OLLAMA_HOST: http://ollama:11434
+    networks:
+      default: {}
+      ollama-net: {}
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+networks:
+  ollama-net: {}
 
 volumes:
   ollama:
