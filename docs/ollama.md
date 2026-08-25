@@ -4,20 +4,20 @@ Optional sibling [Ollama](https://ollama.com) for OpenCode. Default `docker comp
 
 ## Architecture
 
-Ollama and `code-box` share a dedicated Compose network `ollama-net`. From the desktop: `http://ollama:11434` (OpenAI-compatible `http://ollama:11434/v1`). A loopback proxy also serves `http://127.0.0.1:11434` inside `code-box` so OpenCode’s default discovery works. Models live in a named volume. Host bind is `127.0.0.1:11434`. Leave Ollama off `sandbox-net`; `code-box` reaches it on `ollama-net` when both overlays are up.
+Ollama and `code-box` share Compose `default` plus a dedicated `ollama-net` (`172.30.114.0/24`; Ollama is `172.30.114.10`). From the desktop: `http://ollama:11434` (OpenAI-compatible `http://ollama:11434/v1`). A loopback proxy also serves `http://127.0.0.1:11434` inside `code-box` (socat → `172.30.114.10:11434`) so OpenCode’s default discovery works. Models live in a named volume. Host bind is `127.0.0.1:11434`. Leave Ollama off `sandbox-net`.
 
 ```
 Host Docker
   ├── code-box                 — desktop; OpenCode at http://ollama:11434/v1
-  │     └── ollama-localhost-proxy  — 127.0.0.1:11434 → ollama:11434
+  │     └── ollama-localhost-proxy  — 127.0.0.1:11434 → 172.30.114.10:11434
   └── ollama                   — model host (CPU, or NVIDIA via extra overlay)
-         shared network: ollama-net
+         shared networks: default + ollama-net (172.30.114.10)
          host bind: 127.0.0.1:11434
 ```
 
 The base overlay is CPU. `docker-compose.ollama.gpu.yaml` adds NVIDIA device reservations.
 
-Apply every overlay you need in **one** `docker compose` invocation (same project). A separate `docker run --name ollama` or a second Compose project will not join `ollama-net`, and `http://ollama:11434` will fail from the desktop.
+Apply every overlay you need in **one** `docker compose` invocation (same project). A separate `docker run --name ollama` or a second Compose project will not join those networks, and `http://ollama:11434` will fail from the desktop. After changing overlays, recreate so `code-box` actually joins `ollama-net` (`up -d` may recreate Ollama without reconnecting an existing desktop container).
 
 ## Host requirements
 
@@ -62,34 +62,35 @@ Without the toolkit, the GPU overlay fails with `could not select device driver 
 CPU:
 
 ```bash
-docker compose -f docker-compose.yaml -f docker-compose.ollama.yaml up -d
+docker compose -f docker-compose.yaml -f docker-compose.ollama.yaml up -d --force-recreate
 ```
 
 NVIDIA GPU:
 
 ```bash
-docker compose -f docker-compose.yaml -f docker-compose.ollama.yaml -f docker-compose.ollama.gpu.yaml up -d
+docker compose -f docker-compose.yaml -f docker-compose.ollama.yaml -f docker-compose.ollama.gpu.yaml up -d --force-recreate
 ```
 
 With sandbox (start `sandbox-dind` first; [sandbox-docker.md](sandbox-docker.md)):
 
 ```bash
-docker compose -f docker-compose.yaml -f docker-compose.sandbox.yaml -f docker-compose.ollama.yaml up -d
+docker compose -f docker-compose.yaml -f docker-compose.sandbox.yaml -f docker-compose.ollama.yaml up -d --force-recreate
 ```
 
 Sandbox + NVIDIA GPU (all overlays in one project):
 
 ```bash
-docker compose -f docker-compose.yaml -f docker-compose.sandbox.yaml -f docker-compose.ollama.yaml -f docker-compose.ollama.gpu.yaml up -d
+docker compose -f docker-compose.yaml -f docker-compose.sandbox.yaml -f docker-compose.ollama.yaml -f docker-compose.ollama.gpu.yaml up -d --force-recreate
 ```
 
 To make that the default for `docker compose up`, set `COMPOSE_FILE` in `.env` (see `.env.example`).
 
 `code-box` waits until Ollama is healthy. Default memory limit is 8G (`OLLAMA_MEMORY_LIMIT`). Pin `OLLAMA_VERSION` or `OLLAMA_HOST_PORT` in `.env`. If the host already binds 11434, set `OLLAMA_HOST_PORT` to a free loopback port; Compose DNS remains `ollama:11434`.
 
-From inside `code-box`, both of these should list models:
+From inside `code-box`, `ollama` should resolve to `172.30.114.10` (and possibly a `default`-network IP) and both curls should return a JSON model list:
 
 ```bash
+getent hosts ollama
 curl -sS http://ollama:11434/api/tags
 curl -sS http://127.0.0.1:11434/api/tags
 ```
@@ -151,7 +152,10 @@ Upstream: [OpenCode providers](https://opencode.ai/docs/providers/), [Ollama ↔
 | Symptom | Check |
 |---------|--------|
 | `could not select device driver nvidia` | Toolkit on the host; GPU overlay only with NVIDIA. |
-| Connection refused / no API from the desktop | All overlays in **one** `docker compose -f …` project (not a separate `docker run --name ollama`). `docker exec code-box getent hosts ollama`. `docker exec code-box curl -sS http://ollama:11434/api/tags`. OpenCode `baseURL` `http://ollama:11434/v1` (or `http://localhost:11434/v1` via the proxy). `docker network inspect` that `code-box` is on `ollama-net` and `ollama` is not on `sandbox-net`. |
+| Connection refused / no API from the desktop | All overlays in **one** `docker compose -f …` project (not a separate `docker run --name ollama`). Recreate: `up -d --force-recreate`. `docker exec code-box getent hosts ollama` (expect `172.30.114.10`). `docker exec code-box curl -sS http://ollama:11434/api/tags`. OpenCode `baseURL` `http://ollama:11434/v1` (or `http://localhost:11434/v1` via the proxy). `docker network inspect` that `code-box` is on `ollama-net` and `ollama` is not on `sandbox-net`. |
+| `curl: (6) Could not resolve host: ollama` | `code-box` is not on `default`/`ollama-net` with Ollama. Recreate with the Ollama overlay in the same project. |
+| `curl: (52) Empty reply from server` on `127.0.0.1:11434` | Loopback proxy is up but cannot reach `172.30.114.10`. Recreate so `code-box` joins `ollama-net`. |
+| `Pool overlaps with other one on this address space` | Another Docker network already uses `172.30.114.0/24`. Change the `ollama-net` subnet in `docker-compose.ollama.yaml`. |
 | Model missing from the OpenCode picker | Exact `ollama list` tag under `provider.ollama.models`; restart the TUI. |
 | OOM / container killed | Raise `OLLAMA_MEMORY_LIMIT` or use a smaller model. |
 | `curl: (7) Failed to connect` from the host | Loopback only: `http://127.0.0.1:11434` (or `OLLAMA_HOST_PORT`), or `docker exec`. |
