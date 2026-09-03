@@ -245,4 +245,5 @@ RUN printf '// removed upstream; stub for legacy kclient index.html reference\n'
 COPY root/ /
 
 RUN chmod +x /defaults/startwm.sh /usr/local/bin/code /usr/local/bin/playwright-mcp \
-    && echo '[ -f /etc/profile.d/github.sh ] && . /etc/profile.d/github.sh' >> /etc/bash.bashrc
+    && echo '[ -f /etc/profile.d/github.sh ] && . /etc/profile.d/github.sh' >> /etc/bash.bashrc \
+    && echo '[ -f /etc/profile.d/sandbox-docker.sh ] && . /etc/profile.d/sandbox-docker.sh' >> /etc/bash.bashrc

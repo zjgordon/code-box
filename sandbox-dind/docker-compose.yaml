@@ -25,10 +25,19 @@ services:
       DOCKER_TLS_CERTDIR: ""
     volumes:
       - ../certs/server:/certs:ro
+      # Same absolute path as code-box so compose bind mounts of /workspace/... work.
+      # Do not mount /config (credentials) or the host Docker socket.
+      - ../data/workspace:/workspace
       - dind-storage:/var/lib/docker
     networks:
       - sandbox-net
     # No host port publish — reachable only on sandbox-net.
+    healthcheck:
+      test: ["CMD", "docker", "info"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
     deploy:
       resources:
         limits:

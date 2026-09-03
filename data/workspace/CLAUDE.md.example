@@ -3,7 +3,7 @@
 ## Stack
 
 - code-box: KasmVNC desktop with Cursor IDE, VS Code, Claude Code CLI, and OpenCode CLI
-- Access: http://localhost:3000 (or http://<host-ip>:3000 on your LAN)
+- Access: http://localhost:3000 (or http://<host-ip>:3000 on the LAN)
 
 ## Conventions
 
@@ -13,3 +13,14 @@
 ## This workspace
 
 Projects live under `/workspace` inside code-box (`./data/workspace/` on the host).
+
+## Isolated Docker (when the sandbox overlay is enabled)
+
+Docker is a **sibling** daemon (`sandbox-dind`) over TLS, not the host socket and not dockerd inside this desktop.
+
+- Bind mounts of `/workspace/...` work. Do not rewrite product `docker-compose*.yml` / `*:dev.yml` to drop source binds.
+- Host paths (`/opt/docker/...`) are not visible to the daemon. Use `/workspace/...`.
+- `ports:` publish on **sandbox-dind**. Curl and Playwright: `http://sandbox-dind:<port>`, not `http://127.0.0.1:<port>`.
+- Wait for `docker info` to succeed before the first `docker build` (first-boot can take a while).
+- Default Node is 24; use `nvm use` / `.nvmrc` for another version.
+- GitHub Actions that run only on `main` + `pull_request` need a PR; a branch push is not enough.
