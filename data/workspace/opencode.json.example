@@ -5,6 +5,16 @@
       "type": "local",
       "command": ["/usr/local/bin/playwright-mcp"],
       "enabled": true
+    },
+    "github": {
+      "type": "local",
+      "command": ["/usr/local/bin/github-mcp"],
+      "enabled": true
+    },
+    "fetch": {
+      "type": "local",
+      "command": ["/usr/local/bin/fetch-mcp"],
+      "enabled": true
     }
   },
   "provider": {

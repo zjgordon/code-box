@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# GitHub MCP for Cursor / Claude Code / OpenCode.
+# Local binary + token from `gh auth` (HOME is /config). Do not use Docker or npx.
+set -euo pipefail
+
+export HOME="${HOME:-/config}"
+
+BIN=/usr/local/lib/github-mcp-server/github-mcp-server
+if [ ! -x "$BIN" ]; then
+  echo "ERROR: GitHub MCP binary not found at $BIN" >&2
+  exit 1
+fi
+
+if ! command -v gh >/dev/null 2>&1; then
+  echo "ERROR: gh not found; rebuild the image" >&2
+  exit 1
+fi
+
+TOKEN="$(gh auth token 2>/dev/null || true)"
+if [ -z "$TOKEN" ]; then
+  echo "ERROR: GitHub MCP needs gh auth. Run: gh auth login --hostname github.com --git-protocol ssh --web" >&2
+  exit 1
+fi
+
+export GITHUB_PERSONAL_ACCESS_TOKEN="$TOKEN"
+export GITHUB_TOOLSETS="${GITHUB_TOOLSETS:-default,actions}"
+
+exec "$BIN" stdio "$@"

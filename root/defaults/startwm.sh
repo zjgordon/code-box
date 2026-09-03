@@ -17,51 +17,50 @@ if [ -d /opt/gh-share/gh/extensions ]; then
   done
 fi
 
-# Playwright MCP: seed Cursor config if missing; merge into Claude / OpenCode if the key is absent
+# MCP: seed Cursor config if missing; merge into Cursor / Claude / OpenCode if a key is absent
 if [ ! -f "${HOME}/.cursor/mcp.json" ] && [ -f /defaults/cursor-mcp.json ]; then
   mkdir -p "${HOME}/.cursor"
   cp -f /defaults/cursor-mcp.json "${HOME}/.cursor/mcp.json"
 fi
-if command -v jq >/dev/null; then
-  if [ -f "${HOME}/.cursor/mcp.json" ] \
-     && ! jq -e '.mcpServers.playwright' "${HOME}/.cursor/mcp.json" >/dev/null 2>&1; then
+
+seed_mcp_command() {
+  # $1 = jq path to the server object (e.g. .mcpServers.github)
+  # $2 = JSON value to assign
+  # $3 = file
+  local path="$1" value="$2" file="$3"
+  if ! jq -e "${path}" "${file}" >/dev/null 2>&1; then
     tmp=$(mktemp)
-    if jq '.mcpServers.playwright = {"command":"/usr/local/bin/playwright-mcp"}' \
-         "${HOME}/.cursor/mcp.json" >"$tmp"; then
-      mv "$tmp" "${HOME}/.cursor/mcp.json"
+    if jq "${path} = ${value}" "${file}" >"$tmp"; then
+      mv "$tmp" "${file}"
     else
       rm -f "$tmp"
     fi
+  fi
+}
+
+if command -v jq >/dev/null; then
+  if [ -f "${HOME}/.cursor/mcp.json" ]; then
+    seed_mcp_command '.mcpServers.playwright' '{"command":"/usr/local/bin/playwright-mcp"}' "${HOME}/.cursor/mcp.json"
+    seed_mcp_command '.mcpServers.github' '{"command":"/usr/local/bin/github-mcp"}' "${HOME}/.cursor/mcp.json"
+    seed_mcp_command '.mcpServers.fetch' '{"command":"/usr/local/bin/fetch-mcp"}' "${HOME}/.cursor/mcp.json"
   fi
 
   claude_json="${HOME}/.claude.json"
   if [ ! -f "$claude_json" ]; then
     printf '%s\n' '{"mcpServers":{}}' >"$claude_json"
   fi
-  if ! jq -e '.mcpServers.playwright' "$claude_json" >/dev/null 2>&1; then
-    tmp=$(mktemp)
-    if jq '.mcpServers.playwright = {"command":"/usr/local/bin/playwright-mcp"}' \
-         "$claude_json" >"$tmp"; then
-      mv "$tmp" "$claude_json"
-    else
-      rm -f "$tmp"
-    fi
-  fi
+  seed_mcp_command '.mcpServers.playwright' '{"command":"/usr/local/bin/playwright-mcp"}' "$claude_json"
+  seed_mcp_command '.mcpServers.github' '{"command":"/usr/local/bin/github-mcp"}' "$claude_json"
+  seed_mcp_command '.mcpServers.fetch' '{"command":"/usr/local/bin/fetch-mcp"}' "$claude_json"
 
   oc_json="${HOME}/.config/opencode/opencode.json"
   mkdir -p "${HOME}/.config/opencode"
   if [ ! -f "$oc_json" ]; then
     printf '%s\n' '{"$schema":"https://opencode.ai/config.json"}' >"$oc_json"
   fi
-  if ! jq -e '.mcp.playwright' "$oc_json" >/dev/null 2>&1; then
-    tmp=$(mktemp)
-    if jq '.mcp.playwright = {"type":"local","command":["/usr/local/bin/playwright-mcp"],"enabled":true}' \
-         "$oc_json" >"$tmp"; then
-      mv "$tmp" "$oc_json"
-    else
-      rm -f "$tmp"
-    fi
-  fi
+  seed_mcp_command '.mcp.playwright' '{"type":"local","command":["/usr/local/bin/playwright-mcp"],"enabled":true}' "$oc_json"
+  seed_mcp_command '.mcp.github' '{"type":"local","command":["/usr/local/bin/github-mcp"],"enabled":true}' "$oc_json"
+  seed_mcp_command '.mcp.fetch' '{"type":"local","command":["/usr/local/bin/fetch-mcp"],"enabled":true}' "$oc_json"
 fi
 
 if command -v xdg-settings &>/dev/null; then

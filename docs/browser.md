@@ -1,6 +1,6 @@
 # Browser tools (Playwright MCP)
 
-Cursor, Claude Code, and OpenCode drive a real browser through Microsoft [Playwright MCP](https://github.com/microsoft/playwright-mcp). That is how agents verify UI in code-box.
+Cursor, Claude Code, and OpenCode drive a real browser through Microsoft [Playwright MCP](https://github.com/microsoft/playwright-mcp). That is how agents verify UI in code-box. GitHub and Fetch MCP are documented in [mcp.md](mcp.md).
 
 Cursor’s **built-in** browser (`cursor-ide-browser`) often does not expose tools in this Linux GUI / container. The agent then says it has no browser tools. Do not rely on Settings → Browser Automation; use the seeded **playwright** MCP server.
 

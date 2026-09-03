@@ -212,6 +212,35 @@ RUN mkdir -p /opt/gh-home /opt/gh-share \
     && test -d /opt/gh-share/gh/extensions/gh-markdown-preview \
     && ls -la /opt/gh-share/gh/extensions
 
+# GitHub MCP (own layer so GITHUB_MCP_VERSION bumps skip earlier layers)
+# Local binary + /usr/local/bin/github-mcp wrapper; token from gh auth at runtime
+ARG TARGETARCH
+ARG GITHUB_MCP_VERSION=1.11.0
+RUN arch="${TARGETARCH:-$(dpkg --print-architecture)}" \
+    && case "${arch}" in \
+      amd64) gharch=x86_64 ;; \
+      arm64) gharch=arm64 ;; \
+      *) echo "ERROR: unsupported arch=${arch}" >&2 && exit 1 ;; \
+    esac \
+    && mkdir -p /usr/local/lib/github-mcp-server /tmp/github-mcp \
+    && wget -q -O /tmp/github-mcp/github-mcp-server.tar.gz \
+         "https://github.com/github/github-mcp-server/releases/download/v${GITHUB_MCP_VERSION}/github-mcp-server_Linux_${gharch}.tar.gz" \
+    && tar -xzf /tmp/github-mcp/github-mcp-server.tar.gz -C /tmp/github-mcp \
+    && install -m 0755 /tmp/github-mcp/github-mcp-server \
+         /usr/local/lib/github-mcp-server/github-mcp-server \
+    && rm -rf /tmp/github-mcp \
+    && test -x /usr/local/lib/github-mcp-server/github-mcp-server
+
+# Fetch MCP (own layer so FETCH_MCP_VERSION bumps skip earlier layers)
+# Pinned venv; /usr/local/bin/fetch-mcp wrapper. Do not use uvx/npx/docker.
+ARG FETCH_MCP_VERSION=2026.8.18
+RUN --mount=type=cache,target=/root/.cache/pip \
+    python3 -m venv /opt/mcp-fetch \
+    && /opt/mcp-fetch/bin/pip install --upgrade pip \
+    && /opt/mcp-fetch/bin/pip install "mcp-server-fetch==${FETCH_MCP_VERSION}" \
+    && /opt/mcp-fetch/bin/python -c "import mcp_server_fetch" \
+    && test -x /opt/mcp-fetch/bin/python
+
 # Playwright MCP + Chromium (own layer so PLAYWRIGHT_MCP_VERSION bumps skip earlier layers)
 # Shared by Cursor, Claude Code, and OpenCode via /usr/local/bin/playwright-mcp
 ARG PLAYWRIGHT_MCP_VERSION=0.0.79
@@ -244,6 +273,7 @@ RUN printf '// removed upstream; stub for legacy kclient index.html reference\n'
 
 COPY root/ /
 
-RUN chmod +x /defaults/startwm.sh /usr/local/bin/code /usr/local/bin/playwright-mcp \
+RUN chmod +x /defaults/startwm.sh /usr/local/bin/code \
+         /usr/local/bin/playwright-mcp /usr/local/bin/github-mcp /usr/local/bin/fetch-mcp \
     && echo '[ -f /etc/profile.d/github.sh ] && . /etc/profile.d/github.sh' >> /etc/bash.bashrc \
     && echo '[ -f /etc/profile.d/sandbox-docker.sh ] && . /etc/profile.d/sandbox-docker.sh' >> /etc/bash.bashrc

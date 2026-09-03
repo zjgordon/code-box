@@ -24,6 +24,8 @@ services:
         CLAUDE_CODE_VERSION: ${CLAUDE_CODE_VERSION:-2.1.220}
         OPENCODE_VERSION: ${OPENCODE_VERSION:-1.18.18}
         PLAYWRIGHT_MCP_VERSION: ${PLAYWRIGHT_MCP_VERSION:-0.0.79}
+        GITHUB_MCP_VERSION: ${GITHUB_MCP_VERSION:-1.11.0}
+        FETCH_MCP_VERSION: ${FETCH_MCP_VERSION:-2026.8.18}
     image: local/code-box:${CURSOR_VERSION:-3.14}
     container_name: code-box
     restart: unless-stopped

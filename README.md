@@ -21,7 +21,7 @@ cp .env.example .env   # set CODE_BOX_USER and CODE_BOX_PASSWORD
 docker compose build && docker compose up -d
 ```
 
-Open [http://localhost:3000](http://localhost:3000) (or `http://<host-ip>:3000` on your LAN), sign in, then run `claude login` in a desktop terminal. For OpenCode, use `/connect` in the TUI to configure an LLM provider. To clone and manage GitHub repos over SSH (MFA-compatible), see [docs/github.md](docs/github.md). Agent browser testing (Cursor, Claude Code, OpenCode) uses Playwright MCP; see [docs/browser.md](docs/browser.md). For other layouts (LAN reverse proxy, HTTPS on a personal server), see [docs/deployment_examples.md](docs/deployment_examples.md).
+Open [http://localhost:3000](http://localhost:3000) (or `http://<host-ip>:3000` on your LAN), sign in, then run `claude login` in a desktop terminal. For OpenCode, use `/connect` in the TUI to configure an LLM provider. To clone and manage GitHub repos over SSH (MFA-compatible), see [docs/github.md](docs/github.md). Agents use Playwright, GitHub, and Fetch MCP; see [docs/mcp.md](docs/mcp.md) (Playwright details: [docs/browser.md](docs/browser.md)). For other layouts (LAN reverse proxy, HTTPS on a personal server), see [docs/deployment_examples.md](docs/deployment_examples.md).
 
 Optional: set `CODE_BOX_PORT` in `.env` if host port `3000` is taken.
 
@@ -31,9 +31,9 @@ Resources (defaults work for agent/desktop use; override in `.env`): `CODE_BOX_M
 
 To clone, review, and manage public GitHub repositories from the desktop (`gh`, SSH, MFA, Verified commits), see [docs/github.md](docs/github.md).
 
-## Browser tools
+## Agent MCP tools
 
-Agents in Cursor, Claude Code, and OpenCode use Playwright MCP (headless Chromium), not Cursor’s built-in browser. See [docs/browser.md](docs/browser.md).
+Agents in Cursor, Claude Code, and OpenCode share Playwright (browser), GitHub (API + Actions), and Fetch (HTTP → markdown). See [docs/mcp.md](docs/mcp.md). Playwright details: [docs/browser.md](docs/browser.md).
 
 ## Optional: isolated Docker
 
@@ -47,7 +47,7 @@ To host a local model for OpenCode (optional sibling container; NVIDIA GPU is a 
 
 - **Releases:** git tags `vMAJOR.MINOR.PATCH` (see [Releases](../../releases))
 - **Image tag:** `local/code-box:<CURSOR_VERSION>` (default `3.14`)
-- **Build pins** (override in `.env`): `CURSOR_VERSION`, `NODE_VERSION`, `NVM_VERSION`, `CLAUDE_CODE_VERSION`, `OPENCODE_VERSION`, `PLAYWRIGHT_MCP_VERSION`
+- **Build pins** (override in `.env`): `CURSOR_VERSION`, `NODE_VERSION`, `NVM_VERSION`, `CLAUDE_CODE_VERSION`, `OPENCODE_VERSION`, `PLAYWRIGHT_MCP_VERSION`, `GITHUB_MCP_VERSION`, `FETCH_MCP_VERSION`
 
 ```bash
 scripts/update-cursor.sh

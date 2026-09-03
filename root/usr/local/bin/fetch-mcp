@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Fetch MCP for Cursor / Claude Code / OpenCode.
+# Pinned venv at /opt/mcp-fetch. Do not use uvx, npx, or Docker.
+# Node on PATH (nvm) selects fetch's more robust HTML simplifier.
+set -euo pipefail
+
+export NVM_DIR="${NVM_DIR:-/opt/nvm}"
+if [ -f /etc/profile.d/nvm.sh ]; then
+  # shellcheck disable=SC1091
+  . /etc/profile.d/nvm.sh
+fi
+
+PY=/opt/mcp-fetch/bin/python
+if [ ! -x "$PY" ]; then
+  echo "ERROR: Fetch MCP venv not found at $PY" >&2
+  exit 1
+fi
+
+exec "$PY" -m mcp_server_fetch --ignore-robots-txt "$@"

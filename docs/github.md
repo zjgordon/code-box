@@ -13,6 +13,7 @@ HOME is `/config` (host `./data/config`). Keys and `gh` tokens stay on that volu
 | `git-lfs` | Large files (`git lfs install --system` already ran at image build) |
 | `gh dash` | PR / issue TUI ([dlvhdr/gh-dash](https://github.com/dlvhdr/gh-dash)) |
 | `gh markdown-preview` | README preview in Firefox ([yusukebe/gh-markdown-preview](https://github.com/yusukebe/gh-markdown-preview)) |
+| `/usr/local/bin/github-mcp` | GitHub MCP for agents (token from `gh auth`; see [mcp.md](mcp.md)) |
 
 GitHub’s SSH host keys are pinned in `/etc/ssh/ssh_known_hosts` (`github.com` and `ssh.github.com`, including port 443). The desktop session starts `ssh-agent` so passphrase-protected keys and SSH commit signing work.
 
@@ -67,7 +68,7 @@ gh dash
 gh markdown-preview README.md
 ```
 
-`gh` uses SSH git remotes after `--git-protocol ssh`. API calls use the token from `gh auth login` (stored under `/config`).
+`gh` uses SSH git remotes after `--git-protocol ssh`. API calls use the token from `gh auth login` (stored under `/config`). The GitHub MCP wrapper (`github-mcp`) uses that same token so agents can list Actions runs, PRs, and issues without a second login. See [mcp.md](mcp.md).
 
 ## Checks (do not mutate remotes)
 
@@ -104,3 +105,4 @@ gh repo view cli/cli
 | Commits not **Verified** | Upload the key as **signing** as well; `git config --global gpg.format ssh` and `user.signingkey` to the `.pub` file. |
 | `gh dash` / `gh markdown-preview` missing | Extensions seed on first desktop start from `/opt/gh-share`. `gh extension list`; if empty, log out of the desktop session and back in. |
 | Passphrase prompt never appears | Session `ssh-agent` + `ssh-askpass`. Open a new terminal after the desktop has started. |
+| GitHub MCP: needs gh auth | Complete this page first; restart Cursor / Claude / OpenCode. [mcp.md](mcp.md). |

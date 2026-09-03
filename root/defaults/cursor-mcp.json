@@ -2,6 +2,12 @@
   "mcpServers": {
     "playwright": {
       "command": "/usr/local/bin/playwright-mcp"
+    },
+    "github": {
+      "command": "/usr/local/bin/github-mcp"
+    },
+    "fetch": {
+      "command": "/usr/local/bin/fetch-mcp"
     }
   }
 }
