@@ -10,6 +10,8 @@ Cursor, Claude Code, and OpenCode share three seeded MCP servers. Wrappers live 
 
 HOME is `/config` (host `./data/config`). On first desktop start, missing keys are merged into `~/.cursor/mcp.json`, `~/.claude.json`, and `~/.config/opencode/opencode.json`. Existing custom entries are not overwritten.
 
+Playwright MCP is not the project e2e/visual browser. Install test Chromium with `npx playwright install chromium` (no `--with-deps`); see [browser.md](browser.md#project-tests-playwright-cypress-puppeteer).
+
 ## GitHub
 
 [github/github-mcp-server](https://github.com/github/github-mcp-server) is a **local binary** (`/usr/local/lib/github-mcp-server/github-mcp-server`). The wrapper sets `GITHUB_PERSONAL_ACCESS_TOKEN` from `gh auth token` and `GITHUB_TOOLSETS=default,actions`. Nothing is baked into the image.

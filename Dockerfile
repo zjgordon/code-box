@@ -243,8 +243,9 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 # Playwright MCP + Chromium (own layer so PLAYWRIGHT_MCP_VERSION bumps skip earlier layers)
 # Shared by Cursor, Claude Code, and OpenCode via /usr/local/bin/playwright-mcp
+# Browsers stay under /opt for MCP only — do not ENV PLAYWRIGHT_BROWSERS_PATH
+# (agents inherit container env; project tests must use $HOME/.cache/ms-playwright).
 ARG PLAYWRIGHT_MCP_VERSION=0.0.79
-ENV PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     --mount=type=cache,target=/root/.npm \
@@ -254,6 +255,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     && PW_CLI="$(find "$MCP_DIR" -path '*/playwright-core/cli.js' | head -1)" \
     && test -n "$PW_CLI" -a -f "$PW_CLI" \
     && export DEBIAN_FRONTEND=noninteractive \
+    && export PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright \
     && mkdir -p "$PLAYWRIGHT_BROWSERS_PATH" \
     && node "$PW_CLI" install-deps chromium \
     && node "$PW_CLI" install chromium \

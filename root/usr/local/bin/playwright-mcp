@@ -10,7 +10,9 @@ if [ -f /etc/profile.d/nvm.sh ]; then
   . /etc/profile.d/nvm.sh
 fi
 
-export PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-/opt/ms-playwright}"
+# Force the image cache. Do not inherit PLAYWRIGHT_BROWSERS_PATH from the
+# container/agent env (project tests use $HOME/.cache/ms-playwright).
+export PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
 export PLAYWRIGHT_MCP_NO_SANDBOX="${PLAYWRIGHT_MCP_NO_SANDBOX:-1}"
 
 REAL="$(npm prefix -g)/bin/playwright-mcp"
