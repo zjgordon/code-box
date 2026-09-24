@@ -1,10 +1,12 @@
 # code-box — browser-accessible XFCE desktop with Cursor IDE, VS Code, Claude Code, and OpenCode.
 #
-# Default install: HTTP on the local host or LAN (port 3000).
+# Default install is the "dev box": HTTP on the local host or LAN (port 3000), no Docker
+# inside the desktop. The walled-garden mode (Sysbox DinD sibling) is scripts/up.sh --sandbox.
+# What is and isn't contained: docs/threat-model.md.
 #
 # Bootstrap:
 #   1. cp .env.example .env   # set CODE_BOX_USER and CODE_BOX_PASSWORD
-#   2. docker compose build && docker compose up -d
+#   2. scripts/up.sh --build  (or: docker compose build && docker compose up -d)
 #   3. http://localhost:3000 — KasmVNC login (or http://<host-ip>:3000 on your LAN)
 #   4. Terminal: claude login  (OAuth via Firefox; use manual flow if callback fails)
 #   5. OpenCode TUI: /connect   (configure LLM provider / API key)
@@ -30,12 +32,17 @@ services:
     container_name: code-box
     restart: unless-stopped
 
+    # linuxserver KasmVNC guidance: GUI/Electron apps (Cursor, VS Code, Firefox) use syscalls
+    # that older Docker/libseccomp default profiles block. Not a Chromium-sandbox need (those
+    # run --no-sandbox). To test without it: docs/threat-model.md#testing-seccomp
     security_opt:
       - seccomp=unconfined
 
     # Electron/Firefox benefit from a larger /dev/shm than the Docker default (64MB)
     shm_size: ${CODE_BOX_SHM_SIZE:-1gb}
 
+    # Plain HTTP on all host interfaces. Beyond a single workstation, front it with an HTTPS
+    # reverse proxy (docs/deployment_examples.md) or bind 127.0.0.1 in an override.
     ports:
       - "${CODE_BOX_PORT:-3000}:3000"
 

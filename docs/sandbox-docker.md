@@ -1,6 +1,6 @@
 # Isolated Docker sandbox (Sysbox DinD)
 
-Sibling Docker Engine for agents in `code-box`, without the host socket.
+Sibling Docker Engine for agents in `code-box`, without the host socket. This is the walled-garden mode. The default `docker compose up` is the dev box, with no Docker inside the desktop. What this does and doesn't contain: [threat-model.md](threat-model.md).
 
 ## Architecture
 
@@ -14,7 +14,7 @@ Host Docker (sysbox-runc)
          shared bind:    ./data/workspace → /workspace
 ```
 
-Agents talk to this daemon only. Keep Traefik, Gitea, Ollama, and other lab stacks off `sandbox-net`. The network has egress so pulls and builds work. Further hardening (firewall, HTTP proxy, private registry) is host policy.
+Agents talk to this daemon only. Keep Traefik, Gitea, Ollama, and other lab stacks off `sandbox-net`. The network has egress so pulls and builds work. Further hardening (firewall, HTTP proxy, private registry) is host policy; see [threat-model.md](threat-model.md#deliberately-open).
 
 Do **not** mount `/config` into dind (gh tokens, SSH keys, Cursor/Claude state). Do **not** put dockerd inside `code-box` or attach the host Docker socket.
 
@@ -71,7 +71,16 @@ docker compose build
 
 ## Bring-up order
 
-`sandbox-dind` creates `sandbox-net`, then the overlay:
+One command, from the repo root once Sysbox is installed:
+
+```bash
+scripts/up.sh --sandbox            # add --build on first run, --ollama [--gpu] for Ollama
+scripts/up.sh --sandbox --down     # stop both stacks (volumes kept)
+```
+
+It checks that `.env` has credentials (not `changeme`) and that `docker info` lists `sysbox-runc`, runs `generate-dind-certs.sh` if PEMs are missing (never rotates an existing CA), starts `sandbox-dind` with `--wait` on its healthcheck, and then brings up the desktop with every selected overlay in one project. Its explicit `-f` flags take precedence over `COMPOSE_FILE` in `.env`.
+
+Manual equivalent: `sandbox-dind` creates `sandbox-net`, then the overlay:
 
 ```bash
 docker compose -f sandbox-dind/docker-compose.yaml up -d
@@ -137,6 +146,7 @@ Cursor may set `npm_config_devdir`. npm 11 warns that this key is unknown. Inter
 |------|------|
 | [`sandbox-dind/docker-compose.yaml`](../sandbox-dind/docker-compose.yaml) | DinD sibling (`runtime: sysbox-runc`, dedicated net, TLS, `/workspace` bind) |
 | [`docker-compose.sandbox.yaml`](../docker-compose.sandbox.yaml) | Overlay: `DOCKER_*` + client certs + `sandbox-net` |
+| [`scripts/up.sh`](../scripts/up.sh) | Preflight + certs + ordered bring-up (`--sandbox`) |
 | [`scripts/generate-dind-certs.sh`](../scripts/generate-dind-certs.sh) | One-shot cert generation |
 | [`certs/`](../certs/) | Generated PEMs (not committed) |
 
@@ -144,6 +154,8 @@ Cursor may set `npm_config_devdir`. npm 11 warns that this key is unknown. Inter
 
 | Symptom | Check |
 |---------|--------|
+| `up.sh`: `sysbox-runc runtime not found` | Sysbox isn't installed or registered with this Docker Engine; see [Host requirements](#host-requirements). Nothing was started. |
+| `up.sh`: `.env not found` / `Set CODE_BOX_PASSWORD` / `placeholder 'changeme'` | `cp .env.example .env` and set real credentials. |
 | `network sandbox-net declared as external, but could not be found` | Start `sandbox-dind` before the overlay. |
 | `error during connect` / TLS errors | Regenerate certs; `./certs/client` mounted; `DOCKER_CERT_PATH=/certs/client`. |
 | `docker info` fails right after start | Wait for the healthcheck (`start_period` 30s). Retry before the first build. |

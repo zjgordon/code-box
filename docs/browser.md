@@ -18,7 +18,7 @@ HOME is `/config` (host `./data/config`). MCP configs are seeded on first deskto
 | `~/.claude.json` | Claude Code `mcpServers.playwright` |
 | `~/.config/opencode/opencode.json` | OpenCode `mcp.playwright` |
 
-`--no-sandbox` is required in Docker. `shm_size` (1gb) and `seccomp=unconfined` are already set on the desktop container.
+`--no-sandbox` is required in Docker. `shm_size` (1gb) and `seccomp=unconfined` are already set on the desktop container. Why, and what that trades away: [threat-model.md](threat-model.md#deliberately-open).
 
 The wrapper sources nvm because Cursor is launched as a GUI app and does not load `bashrc`. Do not point MCP at `npx @playwright/mcp@latest`.
 

@@ -1,7 +1,7 @@
 # Sibling Docker-in-Docker under Sysbox — isolated from the host Docker socket.
 # Requires Sysbox on the host (sysbox-runc). See docs/sandbox-docker.md.
 #
-# Bring-up (from repo root):
+# Bring-up (from repo root): scripts/up.sh --sandbox, or manually:
 #   ./scripts/generate-dind-certs.sh
 #   docker compose -f sandbox-dind/docker-compose.yaml up -d
 

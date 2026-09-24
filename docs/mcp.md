@@ -20,7 +20,7 @@ Playwright MCP is not the project e2e/visual browser. Install test Chromium with
 2. Restart Cursor (or `/mcp` in Claude Code / restart OpenCode) so the server can start.
 3. Ask the agent to list workflow runs or open a PR.
 
-The same token scopes as `gh` apply (not read-only). Override toolsets with `GITHUB_TOOLSETS` on the wrapper environment if you need a smaller set.
+The same token scopes as `gh` apply (not read-only). Override toolsets with `GITHUB_TOOLSETS` on the wrapper environment if you need a smaller set, or set `GITHUB_READ_ONLY=1`. For narrower tokens, see [threat-model.md](threat-model.md#deliberately-open).
 
 Do **not** run `ghcr.io/github/github-mcp-server` on sibling DinD for this. Do **not** use the Copilot remote MCP URL unless you deliberately want a second OAuth path.
 
@@ -32,7 +32,7 @@ Pinned [`mcp-server-fetch`](https://pypi.org/project/mcp-server-fetch/) in `/opt
 
 Use Fetch for raw pages and APIs. Use Playwright when you need a real browser (JS apps, clicks, `http://sandbox-dind:<port>` UI).
 
-Fetch can reach the same places `curl` can, including loopback and lab DNS (`127.0.0.1`, `ollama`, `sandbox-dind`). That is not a new hole; do not treat it as a browser sandbox.
+Fetch can reach the same places `curl` can, including loopback and lab DNS (`127.0.0.1`, `ollama`, `sandbox-dind`). That is not a new hole; do not treat it as a browser sandbox. See [threat-model.md](threat-model.md).
 
 ## Cursor
 
