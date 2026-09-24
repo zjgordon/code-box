@@ -2,6 +2,8 @@
 
 What "walled garden" means in code-box: which boundaries hold, which are deliberately open, and what to tighten for your own setup.
 
+Implementation tracker: [walled-garden-hardening-plan.md](walled-garden-hardening-plan.md).
+
 ## Scope
 
 code-box is a **single-user** dev box for running coding agents (Cursor, Claude Code, OpenCode) with a reduced blast radius. It is **not** multi-tenant, not a hardened sandbox against a determined container escape, and not an egress firewall.
