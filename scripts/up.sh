@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # One-command bring-up for code-box and its optional siblings.
 #
-#   scripts/up.sh                     dev box (desktop only; no Docker inside, no host socket)
-#   scripts/up.sh --sandbox           walled garden (Sysbox DinD sibling over TLS)
-#   scripts/up.sh --sandbox --ollama --gpu --build
-#   scripts/up.sh --sandbox --down    stop (named volumes are kept)
+#   scripts/up.sh --profile local-functional              default desktop profile
+#   scripts/up.sh --profile contained-build --build       Sysbox DinD build profile
+#   scripts/up.sh --sandbox                               compatibility alias for contained-build
+#   scripts/up.sh --profile contained-build --ollama --gpu
+#   scripts/up.sh --profile contained-build --down         stop (named volumes are kept)
 #   scripts/up.sh --seccomp-unconfined  compatibility exception; see threat model
 #
 # Wraps the existing compose files only — no extra services, mounts, or networks.
@@ -15,6 +16,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 SANDBOX=0 OLLAMA=0 GPU=0 BUILD=0 DOWN=0 SECCOMP_UNCONFINED=0
+PROFILE="" PROFILE_EXPLICIT=0
 
 usage() {
   sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
@@ -23,20 +25,50 @@ usage() {
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 
-for arg in "$@"; do
-  case "$arg" in
-    --sandbox) SANDBOX=1 ;;
-    --ollama)  OLLAMA=1 ;;
-    --gpu)     GPU=1 ;;
-    --build)   BUILD=1 ;;
-    --down)    DOWN=1 ;;
-    --seccomp-unconfined) SECCOMP_UNCONFINED=1 ;;
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --profile)
+      [[ $# -ge 2 ]] || die "--profile requires a value"
+      PROFILE="$2"
+      PROFILE_EXPLICIT=1
+      shift 2
+      ;;
+    --profile=*)
+      PROFILE="${1#--profile=}"
+      PROFILE_EXPLICIT=1
+      shift
+      ;;
+    --sandbox) SANDBOX=1; shift ;;
+    --ollama)  OLLAMA=1; shift ;;
+    --gpu)     GPU=1; shift ;;
+    --build)   BUILD=1; shift ;;
+    --down)    DOWN=1; shift ;;
+    --seccomp-unconfined) SECCOMP_UNCONFINED=1; shift ;;
     -h|--help) usage 0 ;;
-    *) echo "Unknown option: $arg" >&2; usage 1 ;;
+    *) echo "Unknown option: $1" >&2; usage 1 ;;
   esac
 done
 
 [[ $GPU -eq 1 && $OLLAMA -eq 0 ]] && die "--gpu requires --ollama"
+
+if [[ $PROFILE_EXPLICIT -eq 0 ]]; then
+  [[ $SANDBOX -eq 1 ]] && PROFILE="contained-build" || PROFILE="local-functional"
+fi
+
+case "$PROFILE" in
+  local-functional)
+    [[ $SANDBOX -eq 0 ]] || die "--sandbox conflicts with --profile local-functional"
+    ;;
+  contained-build)
+    SANDBOX=1
+    ;;
+  protected-agent)
+    die "--profile protected-agent is not available yet; it requires WG-06 credential scoping and WG-07 egress policy"
+    ;;
+  *)
+    die "unknown profile: $PROFILE (use local-functional or contained-build)"
+    ;;
+esac
 
 docker compose version >/dev/null 2>&1 || die "Docker Compose v2 not found (docker compose version)"
 
@@ -98,11 +130,10 @@ UP_ARGS=(up -d)
 "${MAIN[@]}" "${UP_ARGS[@]}"
 
 PORT="$(env_value CODE_BOX_PORT)"
-if [[ $SANDBOX -eq 1 ]]; then
-  MODE="walled garden (Sysbox DinD sandbox)"
-else
-  MODE="dev box (no Docker inside the desktop; add --sandbox for isolated Docker)"
-fi
+case "$PROFILE" in
+  local-functional) MODE="local functional development (no Docker inside the desktop)" ;;
+  contained-build) MODE="contained build execution (Sysbox DinD sandbox)" ;;
+esac
 if [[ $SECCOMP_UNCONFINED -eq 1 ]]; then
   SECCOMP_MODE="unconfined compatibility override"
 else
@@ -110,5 +141,6 @@ else
 fi
 echo
 echo "code-box is up: $MODE"
+echo "  profile: $PROFILE"
 echo "  seccomp: $SECCOMP_MODE"
 echo "  http://localhost:${PORT:-3000}  (plain HTTP — see docs/threat-model.md before exposing beyond this machine)"

@@ -1,6 +1,6 @@
 # Isolated Docker sandbox (Sysbox DinD)
 
-Sibling Docker Engine for agents in `code-box`, without the host socket. This is the walled-garden mode. The default `docker compose up` is the dev box, with no Docker inside the desktop. What this does and doesn't contain: [threat-model.md](threat-model.md).
+Sibling Docker Engine for agents in `code-box`, without the host socket. This is the contained-build profile. The default `docker compose up` is local functional development, with no Docker inside the desktop. What this does and doesn't contain: [threat-model.md](threat-model.md). Profile guarantees: [profiles.md](profiles.md).
 
 ## Architecture
 
@@ -74,8 +74,8 @@ docker compose build
 One command, from the repo root once Sysbox is installed:
 
 ```bash
-scripts/up.sh --sandbox            # add --build on first run, --ollama [--gpu] for Ollama
-scripts/up.sh --sandbox --down     # stop both stacks (volumes kept)
+scripts/up.sh --profile contained-build            # add --build on first run, --ollama [--gpu] for Ollama
+scripts/up.sh --profile contained-build --down     # stop both stacks (volumes kept)
 ```
 
 It checks that `.env` has credentials (not `changeme`) and that `docker info` lists `sysbox-runc`, runs `generate-dind-certs.sh` if PEMs are missing (never rotates an existing CA), starts `sandbox-dind` with `--wait` on its healthcheck, and then brings up the desktop with every selected overlay in one project. Its explicit `-f` flags take precedence over `COMPOSE_FILE` in `.env`.
@@ -146,7 +146,7 @@ Cursor may set `npm_config_devdir`. npm 11 warns that this key is unknown. Inter
 |------|------|
 | [`sandbox-dind/docker-compose.yaml`](../sandbox-dind/docker-compose.yaml) | DinD sibling (`runtime: sysbox-runc`, dedicated net, TLS, `/workspace` bind) |
 | [`docker-compose.sandbox.yaml`](../docker-compose.sandbox.yaml) | Overlay: `DOCKER_*` + client certs + `sandbox-net` |
-| [`scripts/up.sh`](../scripts/up.sh) | Preflight + certs + ordered bring-up (`--sandbox`) |
+| [`scripts/up.sh`](../scripts/up.sh) | Preflight + certs + ordered bring-up (`--profile contained-build`) |
 | [`scripts/generate-dind-certs.sh`](../scripts/generate-dind-certs.sh) | One-shot cert generation |
 | [`certs/`](../certs/) | Generated PEMs (not committed) |
 

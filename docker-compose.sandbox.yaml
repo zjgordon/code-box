@@ -1,7 +1,8 @@
 # Overlay: attach code-box to the Sysbox DinD sibling over TLS.
 # Default `docker compose up` is unchanged — use this file only when enabling the sandbox.
 #
-# Easy path (preflight + certs + ordered bring-up): scripts/up.sh --sandbox
+# Easy path (preflight + certs + ordered bring-up):
+# scripts/up.sh --profile contained-build
 #
 # Manual prerequisite: sandbox-dind stack is up (creates external network `sandbox-net`).
 #   docker compose -f sandbox-dind/docker-compose.yaml up -d

@@ -8,12 +8,15 @@ Implementation tracker: [walled-garden-hardening-plan.md](walled-garden-hardenin
 
 code-box is a **single-user** dev box for running coding agents (Cursor, Claude Code, OpenCode) with a reduced blast radius. It is **not** multi-tenant, not a hardened sandbox against a determined container escape, and not an egress firewall.
 
-There are two modes:
+There are two available profiles and one deferred profile:
 
-| Mode | Command | Docker inside the desktop |
-|------|---------|---------------------------|
-| **Dev box** (default) | `scripts/up.sh` or `docker compose up -d` | None. No host socket, no daemon. |
-| **Walled garden** | `scripts/up.sh --sandbox` (needs [Sysbox](sandbox-docker.md#host-requirements)) | A Sysbox-isolated sibling `dockerd` over mutual TLS |
+| Profile | Command | Docker and credentials |
+|---------|---------|------------------------|
+| **Local functional development** (default) | `scripts/up.sh` or `scripts/up.sh --profile local-functional` | No desktop Docker daemon or host socket; desktop retains `/config` and broad egress |
+| **Contained build execution** | `scripts/up.sh --profile contained-build` (needs [Sysbox](sandbox-docker.md#host-requirements)) | Sysbox sibling `dockerd` over mutual TLS; DinD sees `/workspace`, never `/config` |
+| **Protected agent operation** | Not available yet | Deferred until WG-06 credential scoping and WG-07 egress policy |
+
+`--sandbox` remains a compatibility alias for `--profile contained-build`. Profile detail and guarantees: [profiles.md](profiles.md).
 
 ## Assets
 
@@ -90,7 +93,7 @@ flowchart LR
 
 - [ ] Strong, unique `CODE_BOX_PASSWORD`.
 - [ ] Non-localhost access goes through an HTTPS reverse proxy. Don't expose `:3000` directly to the internet.
-- [ ] Use the walled-garden mode (`scripts/up.sh --sandbox`) whenever agents need Docker. Never mount the host socket "just this once".
+- [ ] Use the contained-build profile (`scripts/up.sh --profile contained-build`) whenever agents need Docker. Never mount the host socket "just this once".
 - [ ] `gh` logged in with a fine-grained PAT limited to the repos you work on. Branch protection on `main`.
 - [ ] SSH key has a passphrase (session `ssh-agent` handles prompts; see [github.md](github.md)).
 - [ ] Egress policy on the host if agents or nested builds shouldn't reach arbitrary hosts.

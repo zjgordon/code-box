@@ -1,7 +1,8 @@
 # code-box — browser-accessible XFCE desktop with Cursor IDE, VS Code, Claude Code, and OpenCode.
 #
 # Default install is the "dev box": HTTP on the local host or LAN (port 3000), no Docker
-# inside the desktop. The walled-garden mode (Sysbox DinD sibling) is scripts/up.sh --sandbox.
+# inside the desktop. The contained-build profile (Sysbox DinD sibling) is
+# scripts/up.sh --profile contained-build.
 # What is and isn't contained: docs/threat-model.md.
 #
 # Bootstrap:

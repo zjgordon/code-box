@@ -22,19 +22,19 @@ Isolated Docker requires [Sysbox](docs/sandbox-docker.md) on the host. Ollama GP
 cp .env.example .env   # set CODE_BOX_USER and CODE_BOX_PASSWORD (required)
 ```
 
-**Dev box (default).** Desktop and agents, no Docker inside the desktop, no host socket:
+**Local functional development (default).** Desktop and agents, no Docker inside the desktop and no host socket:
 
 ```bash
 scripts/up.sh --build        # or: docker compose build && docker compose up -d
 ```
 
-**Walled garden.** Same desktop, and agents get their own Docker daemon (Sysbox DinD over TLS). Install [Sysbox](docs/sandbox-docker.md#host-requirements) on the host first. The script checks for `sysbox-runc`, generates TLS certs, starts `sandbox-dind`, waits for it to be healthy, and then starts the desktop:
+**Contained build execution.** Same desktop, and agents get their own Docker daemon (Sysbox DinD over TLS). Install [Sysbox](docs/sandbox-docker.md#host-requirements) on the host first. The script checks for `sysbox-runc`, generates TLS certs, starts `sandbox-dind`, waits for it to be healthy, and then starts the desktop:
 
 ```bash
-scripts/up.sh --sandbox --build
+scripts/up.sh --profile contained-build --build
 ```
 
-Add `--ollama` (and `--gpu`) for the local-model sibling; `--down` stops the same set.
+Add `--ollama` (and `--gpu`) for the local-model sibling; `--down` stops the same set. `--sandbox` remains a compatibility alias for `--profile contained-build`. Protected agent operation is not available until scoped credentials and egress policy are implemented. See [docs/profiles.md](docs/profiles.md).
 
 Open [http://localhost:3000](http://localhost:3000), sign in, then run `claude login` in a desktop terminal. KasmVNC binds to loopback by default. To allow trusted-LAN or reverse-proxy access, set `CODE_BOX_BIND_ADDRESS=0.0.0.0` in `.env`; because KasmVNC is plain HTTP, use HTTPS for any non-localhost access. For OpenCode, use `/connect` in the TUI to configure an LLM provider. To clone and manage GitHub repos over SSH (MFA-compatible), see [docs/github.md](docs/github.md). Agents use Playwright, GitHub, and Fetch MCP; see [docs/mcp.md](docs/mcp.md) (Playwright details: [docs/browser.md](docs/browser.md)). For other layouts (LAN reverse proxy, HTTPS on a personal server), see [docs/deployment_examples.md](docs/deployment_examples.md).
 
@@ -54,13 +54,13 @@ To clone, review, and manage public GitHub repositories from the desktop (`gh`, 
 
 Agents in Cursor, Claude Code, and OpenCode share Playwright (browser), GitHub (API + Actions), and Fetch (HTTP → markdown). See [docs/mcp.md](docs/mcp.md). Playwright details: [docs/browser.md](docs/browser.md).
 
-## Walled garden: isolated Docker
+## Contained builds
 
-The walled-garden mode: `scripts/up.sh --sandbox`. The desktop gets a sandboxed Docker Engine (Sysbox sibling DinD, not the host socket). Manual steps and troubleshooting: [docs/sandbox-docker.md](docs/sandbox-docker.md).
+The contained-build profile: `scripts/up.sh --profile contained-build`. The desktop gets a sandboxed Docker Engine (Sysbox sibling DinD, not the host socket). Manual steps and troubleshooting: [docs/sandbox-docker.md](docs/sandbox-docker.md).
 
 ## Optional: Ollama
 
-To host a local model for OpenCode (optional sibling container; NVIDIA GPU is a second overlay): `scripts/up.sh --ollama [--gpu] [--sandbox]`. See [docs/ollama.md](docs/ollama.md).
+To host a local model for OpenCode (optional sibling container; NVIDIA GPU is a second overlay): `scripts/up.sh --ollama [--gpu] [--profile contained-build]`. See [docs/ollama.md](docs/ollama.md).
 
 ## Versioning
 

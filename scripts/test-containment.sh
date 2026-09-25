@@ -127,6 +127,43 @@ check_supply_chain_configuration() {
     || fail "Ollama images are not pinned by digest"
 }
 
+check_profile_selection() {
+  local fake_bin="$TEST_DIR/profile-fake-bin"
+  local profile_log="$TEST_DIR/profile-docker.log"
+  mkdir -p "$fake_bin"
+  printf '%s\n' \
+    '#!/bin/sh' \
+    'printf "%s\n" "$*" >> "$CODE_BOX_PROFILE_LOG"' \
+    >"$fake_bin/docker"
+  chmod 0755 "$fake_bin/docker"
+
+  : >"$profile_log"
+  PATH="$fake_bin:$PATH" CODE_BOX_PROFILE_LOG="$profile_log" \
+    scripts/up.sh --profile contained-build --down >/dev/null
+  grep -q 'docker-compose.sandbox.yaml down' "$profile_log" \
+    || fail "contained-build does not select the desktop sandbox overlay"
+  grep -q 'sandbox-dind/docker-compose.yaml down' "$profile_log" \
+    || fail "contained-build does not select the DinD stack"
+
+  : >"$profile_log"
+  PATH="$fake_bin:$PATH" CODE_BOX_PROFILE_LOG="$profile_log" \
+    scripts/up.sh --sandbox --down >/dev/null
+  grep -q 'docker-compose.sandbox.yaml down' "$profile_log" \
+    || fail "--sandbox no longer selects the contained-build profile"
+
+  : >"$profile_log"
+  PATH="$fake_bin:$PATH" CODE_BOX_PROFILE_LOG="$profile_log" \
+    scripts/up.sh --profile local-functional --down >/dev/null
+  if grep -q 'docker-compose.sandbox.yaml\|sandbox-dind/docker-compose.yaml' "$profile_log"; then
+    fail "local-functional selected a contained-build service"
+  fi
+
+  if PATH="$fake_bin:$PATH" CODE_BOX_PROFILE_LOG="$profile_log" \
+    scripts/up.sh --profile protected-agent --down >/dev/null 2>&1; then
+    fail "protected-agent profile unexpectedly started"
+  fi
+}
+
 check_pids_limit() {
   echo "Checking Docker PID enforcement..."
   docker run --rm --pids-limit 64 --entrypoint sh "$IMAGE" -c '
@@ -231,6 +268,7 @@ check_seccomp_configuration
 check_port_configuration
 check_resource_configuration
 check_supply_chain_configuration
+check_profile_selection
 scripts/up.sh --help | grep -q -- '--seccomp-unconfined' \
   || fail "up.sh does not expose the seccomp compatibility option"
 
