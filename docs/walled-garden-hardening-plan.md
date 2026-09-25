@@ -31,7 +31,7 @@ The profiles describe security outcomes, not merely Compose file combinations. E
 
 | ID | Commit-sized change | Profile | Status | Depends on |
 |----|---------------------|---------|--------|------------|
-| WG-00 | Add a disposable containment smoke-test harness | All | [ ] | None |
+| WG-00 | Add a disposable containment smoke-test harness | All | [x] | None |
 | WG-01 | Make Docker's default seccomp profile the default | All | [ ] | WG-00 |
 | WG-02 | Bind the desktop to loopback by default | All | [ ] | WG-00 |
 | WG-03 | Bound process, CPU, memory, and log/resource exhaustion | All | [ ] | WG-00 |
@@ -58,6 +58,8 @@ The profiles describe security outcomes, not merely Compose file combinations. E
 - When Sysbox is available, assert that the sandbox daemon uses `sysbox-runc`, publishes no host ports, and does not receive `/config`.
 
 **Acceptance:** one command completes with cleanup on success and failure. It leaves no containers, networks, volumes, images, credentials, or changed repository files behind.
+
+**Runner:** `scripts/test-containment.sh`. Set `CODE_BOX_TEST_IMAGE` when testing an image tag other than the default `local/code-box:3.14`. The runner performs the Sysbox DinD assertion automatically when `sysbox-runc` is installed.
 
 ## WG-01: Default Seccomp
 
