@@ -1,13 +1,16 @@
 # syntax=docker/dockerfile:1
 # code-box: KasmVNC desktop with XFCE, Firefox, Cursor IDE, VS Code, and Claude Code CLI
 #
-# Pin the base image digest after validating a build:
-#   docker buildx imagetools inspect ghcr.io/linuxserver/baseimage-kasmvnc:debianbookworm
+# Update the image digest only after validating a build. See
+# docs/supply-chain.md for the reviewed update procedure.
 #
 # Layer order keeps volatile pins (Cursor, extensions, Claude) late so incremental
 # rebuilds reuse apt/Node layers. BuildKit cache mounts speed cold apt/npm installs.
 
-FROM ghcr.io/linuxserver/baseimage-kasmvnc:debianbookworm
+FROM ghcr.io/linuxserver/baseimage-kasmvnc:debianbookworm@sha256:c6129530811450448ab760064b27e111fb3351fc3222af652f605a48eb518ed7
+
+COPY scripts/verify-sha256.sh /usr/local/bin/verify-sha256
+RUN chmod 0755 /usr/local/bin/verify-sha256
 
 # Keep apt lists in BuildKit cache mounts across builds
 RUN rm -f /etc/apt/apt.conf.d/docker-clean \
@@ -133,15 +136,20 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     && grep -q 'github.com ssh-ed25519' /etc/ssh/ssh_known_hosts \
     && grep -q 'ssh.github.com ssh-ed25519' /etc/ssh/ssh_known_hosts
 
-# Node via nvm + pinned Claude Code CLI
+# Node via verified nvm release archive + pinned Claude Code CLI
 ARG NODE_VERSION=24
 ARG NVM_VERSION=0.40.6
+ARG NVM_SHA256=17302cad7feedb1ad33ba738f93d2176a90970724f22de119603624fcbdec1a2
 ARG CLAUDE_CODE_VERSION=2.1.220
 ENV NVM_DIR=/opt/nvm
 RUN --mount=type=cache,target=/root/.npm \
     mkdir -p "$NVM_DIR" \
-    && curl -o- "https://raw.githubusercontent.com/nvm-sh/nvm/v${NVM_VERSION}/install.sh" \
-       | NVM_DIR="$NVM_DIR" bash \
+    && curl --fail --location --silent --show-error \
+         "https://github.com/nvm-sh/nvm/archive/refs/tags/v${NVM_VERSION}.tar.gz" \
+         -o /tmp/nvm.tar.gz \
+    && verify-sha256 "$NVM_SHA256" /tmp/nvm.tar.gz \
+    && tar -xzf /tmp/nvm.tar.gz --strip-components=1 -C "$NVM_DIR" \
+    && rm -f /tmp/nvm.tar.gz \
     && printf 'export NVM_DIR=/opt/nvm\n[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"\n[ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"\n' \
        > /etc/profile.d/nvm.sh \
     && chmod +x /etc/profile.d/nvm.sh \
@@ -179,18 +187,17 @@ RUN mkdir -p "$VSCODE_EXTENSIONS_DIR" /tmp/vscode-user-data \
 
 # Cursor IDE (own layer so CURSOR_VERSION bumps skip apt/Node/extensions)
 ARG CURSOR_VERSION=3.14
+ARG CURSOR_DEB_SHA256=44ea8e6a2c2ac9843856c6698757e4c59b8de9a24202b0a2fd0b62525b13f6c0
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     wget -q -L "https://api2.cursor.sh/updates/download/golden/linux-x64-deb/cursor/${CURSOR_VERSION}" \
         -O /tmp/cursor.deb \
-    && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends /tmp/cursor.deb \
+    && verify-sha256 "$CURSOR_DEB_SHA256" /tmp/cursor.deb \
+    && dpkg-deb -x /tmp/cursor.deb / \
     && rm -f /tmp/cursor.deb \
-    && if [ ! -x /usr/bin/cursor ]; then \
-         CURSOR_BIN=$(dpkg -L cursor 2>/dev/null | grep -E '/bin/cursor$|/cursor$' | head -1); \
-         if [ -n "$CURSOR_BIN" ] && [ -x "$CURSOR_BIN" ]; then ln -sf "$CURSOR_BIN" /usr/bin/cursor; fi; \
-       fi \
+    && test -x /usr/share/cursor/bin/cursor \
+    && rm -rf /usr/bin/cursor \
+    && ln -s /usr/share/cursor/bin/cursor /usr/bin/cursor \
     && test -x /usr/bin/cursor || (echo "ERROR: cursor missing" && exit 1)
 
 # OpenCode CLI (own layer so OPENCODE_VERSION bumps skip earlier layers)
@@ -216,15 +223,18 @@ RUN mkdir -p /opt/gh-home /opt/gh-share \
 # Local binary + /usr/local/bin/github-mcp wrapper; token from gh auth at runtime
 ARG TARGETARCH
 ARG GITHUB_MCP_VERSION=1.11.0
+ARG GITHUB_MCP_SHA256_AMD64=3b73bb7be0c8b043f861e90410df8ebdfc71b83128c54ced75fb32c4ff697fc5
+ARG GITHUB_MCP_SHA256_ARM64=3f7615254f6b619469c471c5d275029299ff7431c93d6075496ea4b2eec020cb
 RUN arch="${TARGETARCH:-$(dpkg --print-architecture)}" \
     && case "${arch}" in \
-      amd64) gharch=x86_64 ;; \
-      arm64) gharch=arm64 ;; \
+      amd64) gharch=x86_64; github_mcp_sha256="$GITHUB_MCP_SHA256_AMD64" ;; \
+      arm64) gharch=arm64; github_mcp_sha256="$GITHUB_MCP_SHA256_ARM64" ;; \
       *) echo "ERROR: unsupported arch=${arch}" >&2 && exit 1 ;; \
     esac \
     && mkdir -p /usr/local/lib/github-mcp-server /tmp/github-mcp \
     && wget -q -O /tmp/github-mcp/github-mcp-server.tar.gz \
          "https://github.com/github/github-mcp-server/releases/download/v${GITHUB_MCP_VERSION}/github-mcp-server_Linux_${gharch}.tar.gz" \
+    && verify-sha256 "$github_mcp_sha256" /tmp/github-mcp/github-mcp-server.tar.gz \
     && tar -xzf /tmp/github-mcp/github-mcp-server.tar.gz -C /tmp/github-mcp \
     && install -m 0755 /tmp/github-mcp/github-mcp-server \
          /usr/local/lib/github-mcp-server/github-mcp-server \

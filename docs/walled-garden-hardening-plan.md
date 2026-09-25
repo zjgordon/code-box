@@ -35,7 +35,7 @@ The profiles describe security outcomes, not merely Compose file combinations. E
 | WG-01 | Make Docker's default seccomp profile the default | All | [x] | WG-00 |
 | WG-02 | Bind the desktop to loopback by default | All | [x] | WG-00 |
 | WG-03 | Bound process, CPU, memory, and log/resource exhaustion | All | [x] | WG-00 |
-| WG-04 | Pin and verify build and runtime supply-chain inputs | All | [ ] | WG-00 |
+| WG-04 | Pin and verify build and runtime supply-chain inputs | All | [x] | WG-00 |
 | WG-05 | Formalize profile selection and compatibility overrides | All | [ ] | WG-01, WG-02, WG-03 |
 | WG-06 | Separate and scope credentials and MCP capabilities | Protected agent operation | [ ] | WG-05 |
 | WG-07 | Design and implement outbound egress controls | Contained build execution, Protected agent operation | [ ] | WG-05, WG-06 |
@@ -101,7 +101,7 @@ The profiles describe security outcomes, not merely Compose file combinations. E
 
 **Implementation direction:** pin the LinuxServer base image, Docker DinD image, Ollama image, and other container references by digest after compatibility validation. Replace unchecked binary downloads and installer pipes with checksum or signature verification. Keep version labels readable alongside digests.
 
-**Acceptance:** a tampered fixture checksum fails the build. The update procedure requires an intentional version-and-digest change. `docker build` reports the pinned artifact identities in a reviewable way.
+**Acceptance:** a tampered fixture fails the checksum verifier used by the build. The update procedure requires an intentional version-and-digest change. `docker build` reports the pinned artifact identities in a reviewable way.
 
 ## WG-05: Explicit Profile Selection
 

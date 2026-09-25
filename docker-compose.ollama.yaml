@@ -14,7 +14,7 @@
 
 services:
   ollama:
-    image: ollama/ollama:${OLLAMA_VERSION:-0.32.14}
+    image: ollama/ollama:${OLLAMA_VERSION:-0.32.14}@${OLLAMA_DIGEST:-sha256:9d30908e41144b1f1da89b9d8e33c07e4aeb43ff41a8660241b1686e2cc330ad}
     container_name: ollama
     restart: unless-stopped
     environment:
@@ -52,7 +52,7 @@ services:
   # OpenCode discovers Ollama at 127.0.0.1:11434. Bind loopback only so nested
   # DinD on sandbox-net cannot reach the API via code-box's sandbox IP.
   ollama-localhost-proxy:
-    image: alpine/socat
+    image: alpine/socat@sha256:24220ef2c80a2a421ea08e4624488e985330c421b6aa3329bae14b0933a1d403
     container_name: ollama-localhost-proxy
     restart: unless-stopped
     network_mode: "service:code-box"

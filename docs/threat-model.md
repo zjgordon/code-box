@@ -68,6 +68,7 @@ flowchart LR
 | KasmVNC refuses to start without credentials (`.env.example` ships a blank password; `up.sh` also rejects `changeme`) | [`.env.example`](../.env.example), [`scripts/up.sh`](../scripts/up.sh) |
 | code-box uses Docker's default seccomp profile; the unconfined exception is a separate, explicit compatibility overlay | [`docker-compose.yaml`](../docker-compose.yaml), [`docker-compose.seccomp-unconfined.yaml`](../docker-compose.seccomp-unconfined.yaml), [`test-containment.sh`](../scripts/test-containment.sh) |
 | KasmVNC publishes only to `127.0.0.1` by default | [`docker-compose.yaml`](../docker-compose.yaml), [`.env.example`](../.env.example), [`test-containment.sh`](../scripts/test-containment.sh) |
+| Container images use immutable digests and direct build artifacts have reviewed SHA-256 checksums | [`Dockerfile`](../Dockerfile), Compose files, [supply-chain.md](supply-chain.md), [`test-supply-chain.sh`](../scripts/test-supply-chain.sh) |
 
 ## Deliberately open
 

@@ -66,11 +66,13 @@ To host a local model for OpenCode (optional sibling container; NVIDIA GPU is a 
 
 - **Releases:** git tags `vMAJOR.MINOR.PATCH` (see [Releases](../../releases))
 - **Image tag:** `local/code-box:<CURSOR_VERSION>` (default `3.14`)
-- **Build pins** (override in `.env`): `CURSOR_VERSION`, `NODE_VERSION`, `NVM_VERSION`, `CLAUDE_CODE_VERSION`, `OPENCODE_VERSION`, `PLAYWRIGHT_MCP_VERSION`, `GITHUB_MCP_VERSION`, `FETCH_MCP_VERSION`
+- **Build version selections:** `CURSOR_VERSION`, `NODE_VERSION`, `NVM_VERSION`, `CLAUDE_CODE_VERSION`, `OPENCODE_VERSION`, `PLAYWRIGHT_MCP_VERSION`, `GITHUB_MCP_VERSION`, `FETCH_MCP_VERSION`. Changing a directly downloaded artifact also requires its matching reviewed SHA-256 in `Dockerfile`.
+
+Image digests and direct-download checksums: [docs/supply-chain.md](docs/supply-chain.md).
 
 ```bash
 scripts/update-cursor.sh
-# bump CURSOR_VERSION, then rebuild (apt/Node/extension layers stay cached):
+# follow docs/supply-chain.md to bump CURSOR_VERSION and its SHA-256, then rebuild:
 docker compose build && docker compose up -d
 ```
 

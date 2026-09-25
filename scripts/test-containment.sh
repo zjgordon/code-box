@@ -103,6 +103,30 @@ check_resource_configuration() {
     || fail "Ollama services do not all use the local log driver"
 }
 
+check_supply_chain_configuration() {
+  grep -q '^FROM .*@sha256:' Dockerfile \
+    || fail "base image is not pinned by digest"
+  grep -q '^ARG NVM_SHA256=' Dockerfile \
+    || fail "nvm archive checksum is missing"
+  grep -q '^ARG CURSOR_DEB_SHA256=' Dockerfile \
+    || fail "Cursor package checksum is missing"
+  grep -q '^ARG GITHUB_MCP_SHA256_AMD64=' Dockerfile \
+    || fail "GitHub MCP amd64 checksum is missing"
+  grep -q '^ARG GITHUB_MCP_SHA256_ARM64=' Dockerfile \
+    || fail "GitHub MCP arm64 checksum is missing"
+
+  docker compose -f sandbox-dind/docker-compose.yaml config >"$TEST_DIR/dind-supply-chain.yaml"
+  grep -q '@sha256:' "$TEST_DIR/dind-supply-chain.yaml" \
+    || fail "sandbox DinD image is not pinned by digest"
+
+  CODE_BOX_USER=containment-test CODE_BOX_PASSWORD=containment-test-password \
+    CODE_BOX_BIND_ADDRESS=127.0.0.1 \
+    docker compose -f docker-compose.yaml -f docker-compose.ollama.yaml config \
+      >"$TEST_DIR/ollama-supply-chain.yaml"
+  [[ "$(grep -c '@sha256:' "$TEST_DIR/ollama-supply-chain.yaml")" -ge 2 ]] \
+    || fail "Ollama images are not pinned by digest"
+}
+
 check_pids_limit() {
   echo "Checking Docker PID enforcement..."
   docker run --rm --pids-limit 64 --entrypoint sh "$IMAGE" -c '
@@ -206,6 +230,7 @@ docker compose -f sandbox-dind/docker-compose.yaml config --quiet
 check_seccomp_configuration
 check_port_configuration
 check_resource_configuration
+check_supply_chain_configuration
 scripts/up.sh --help | grep -q -- '--seccomp-unconfined' \
   || fail "up.sh does not expose the seccomp compatibility option"
 

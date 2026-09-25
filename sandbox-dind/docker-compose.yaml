@@ -7,7 +7,7 @@
 
 services:
   sandbox-dind:
-    image: docker:dind
+    image: docker:${DIND_VERSION:-29.8.1-dind}@${DIND_DIGEST:-sha256:3f3c01aaaebf7cce837356b688b7c059a4749f10bd7660dec7c58fc454a283f0}
     container_name: sandbox-dind
     runtime: sysbox-runc
     restart: unless-stopped

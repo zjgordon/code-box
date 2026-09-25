@@ -40,5 +40,6 @@ else
 fi
 
 echo
-echo "To update: set CURSOR_VERSION in .env and Dockerfile, then:"
+echo "To update: record the exact release version and Debian package SHA-256 in Dockerfile"
+echo "(see docs/supply-chain.md), then:"
 echo "  docker compose build --no-cache && docker compose up -d"
