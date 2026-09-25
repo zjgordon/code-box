@@ -1,0 +1,11 @@
+# Protected-agent overlay: replace the operator's full /config state with a
+# separately provisioned least-privilege directory. Egress remains broad until
+# WG-07; do not put credentials here that an agent may not read or exfiltrate.
+
+services:
+  code-box:
+    environment:
+      GITHUB_READ_ONLY: "1"
+      GITHUB_TOOLSETS: default
+    volumes:
+      - ./data/config-protected:/config

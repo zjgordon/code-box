@@ -5,6 +5,8 @@
 
 # Runtime volume data (template keeps tracked examples only)
 data/config/
+data/config-protected/*
+!data/config-protected/.gitkeep
 data/workspace/**
 !data/workspace/.gitkeep
 !data/workspace/CLAUDE.md.example

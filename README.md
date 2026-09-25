@@ -34,7 +34,13 @@ scripts/up.sh --build        # or: docker compose build && docker compose up -d
 scripts/up.sh --profile contained-build --build
 ```
 
-Add `--ollama` (and `--gpu`) for the local-model sibling; `--down` stops the same set. `--sandbox` remains a compatibility alias for `--profile contained-build`. Protected agent operation is not available until scoped credentials and egress policy are implemented. See [docs/profiles.md](docs/profiles.md).
+Add `--ollama` (and `--gpu`) for the local-model sibling; `--down` stops the same set. `--sandbox` remains a compatibility alias for `--profile contained-build`. See [docs/profiles.md](docs/profiles.md).
+
+**Protected agent operation.** Uses a separate, operator-provisioned `./data/config-protected` directory instead of the full credential state. GitHub MCP defaults to read-only and excludes Actions; outbound network access is still broad. See [docs/profiles.md](docs/profiles.md) before use:
+
+```bash
+scripts/up.sh --profile protected-agent
+```
 
 Open [http://localhost:3000](http://localhost:3000), sign in, then run `claude login` in a desktop terminal. KasmVNC binds to loopback by default. To allow trusted-LAN or reverse-proxy access, set `CODE_BOX_BIND_ADDRESS=0.0.0.0` in `.env`; because KasmVNC is plain HTTP, use HTTPS for any non-localhost access. For OpenCode, use `/connect` in the TUI to configure an LLM provider. To clone and manage GitHub repos over SSH (MFA-compatible), see [docs/github.md](docs/github.md). Agents use Playwright, GitHub, and Fetch MCP; see [docs/mcp.md](docs/mcp.md) (Playwright details: [docs/browser.md](docs/browser.md)). For other layouts (LAN reverse proxy, HTTPS on a personal server), see [docs/deployment_examples.md](docs/deployment_examples.md).
 

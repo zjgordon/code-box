@@ -158,10 +158,38 @@ check_profile_selection() {
     fail "local-functional selected a contained-build service"
   fi
 
-  if PATH="$fake_bin:$PATH" CODE_BOX_PROFILE_LOG="$profile_log" \
-    scripts/up.sh --profile protected-agent --down >/dev/null 2>&1; then
-    fail "protected-agent profile unexpectedly started"
+  : >"$profile_log"
+  PATH="$fake_bin:$PATH" CODE_BOX_PROFILE_LOG="$profile_log" \
+    scripts/up.sh --profile protected-agent --down >/dev/null
+  grep -q 'docker-compose.protected-agent.yaml down' "$profile_log" \
+    || fail "protected-agent does not select the protected credential overlay"
+  if grep -q 'docker-compose.sandbox.yaml\|sandbox-dind/docker-compose.yaml' "$profile_log"; then
+    fail "protected-agent selected DinD without --sandbox"
   fi
+
+  : >"$profile_log"
+  PATH="$fake_bin:$PATH" CODE_BOX_PROFILE_LOG="$profile_log" \
+    scripts/up.sh --profile protected-agent --sandbox --down >/dev/null
+  grep -q 'docker-compose.protected-agent.yaml.*docker-compose.sandbox.yaml down' "$profile_log" \
+    || fail "protected-agent --sandbox does not select both overlays"
+  grep -q 'sandbox-dind/docker-compose.yaml down' "$profile_log" \
+    || fail "protected-agent --sandbox does not select the DinD stack"
+}
+
+check_protected_profile_configuration() {
+  CODE_BOX_USER=containment-test CODE_BOX_PASSWORD=containment-test-password \
+    CODE_BOX_BIND_ADDRESS=127.0.0.1 \
+    docker compose -f docker-compose.yaml -f docker-compose.protected-agent.yaml config \
+      >"$TEST_DIR/protected-profile.yaml"
+  grep -q 'data/config-protected' "$TEST_DIR/protected-profile.yaml" \
+    || fail "protected-agent does not mount the separate credential state"
+  if grep -Eq 'source: .*/data/config$' "$TEST_DIR/protected-profile.yaml"; then
+    fail "protected-agent retains the operator credential mount"
+  fi
+  grep -q 'GITHUB_READ_ONLY: "1"' "$TEST_DIR/protected-profile.yaml" \
+    || fail "protected-agent does not enable read-only GitHub MCP"
+  grep -q 'GITHUB_TOOLSETS: default' "$TEST_DIR/protected-profile.yaml" \
+    || fail "protected-agent does not narrow GitHub MCP toolsets"
 }
 
 check_pids_limit() {
@@ -269,6 +297,7 @@ check_port_configuration
 check_resource_configuration
 check_supply_chain_configuration
 check_profile_selection
+check_protected_profile_configuration
 scripts/up.sh --help | grep -q -- '--seccomp-unconfined' \
   || fail "up.sh does not expose the seccomp compatibility option"
 

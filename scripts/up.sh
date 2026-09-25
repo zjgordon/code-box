@@ -2,9 +2,9 @@
 # One-command bring-up for code-box and its optional siblings.
 #
 #   scripts/up.sh --profile local-functional              default desktop profile
-#   scripts/up.sh --profile contained-build --build       Sysbox DinD build profile
+#   scripts/up.sh --profile contained-build [--build] [--ollama] [--gpu]
 #   scripts/up.sh --sandbox                               compatibility alias for contained-build
-#   scripts/up.sh --profile contained-build --ollama --gpu
+#   scripts/up.sh --profile protected-agent [--sandbox]  scoped state; broad egress remains
 #   scripts/up.sh --profile contained-build --down         stop (named volumes are kept)
 #   scripts/up.sh --seccomp-unconfined  compatibility exception; see threat model
 #
@@ -63,10 +63,10 @@ case "$PROFILE" in
     SANDBOX=1
     ;;
   protected-agent)
-    die "--profile protected-agent is not available yet; it requires WG-06 credential scoping and WG-07 egress policy"
+    :
     ;;
   *)
-    die "unknown profile: $PROFILE (use local-functional or contained-build)"
+    die "unknown profile: $PROFILE (use local-functional, contained-build, or protected-agent)"
     ;;
 esac
 
@@ -74,6 +74,7 @@ docker compose version >/dev/null 2>&1 || die "Docker Compose v2 not found (dock
 
 DIND=(docker compose -f sandbox-dind/docker-compose.yaml)
 MAIN=(docker compose -f docker-compose.yaml)
+[[ $PROFILE == "protected-agent" ]] && MAIN+=(-f docker-compose.protected-agent.yaml)
 [[ $SECCOMP_UNCONFINED -eq 1 ]] && MAIN+=(-f docker-compose.seccomp-unconfined.yaml)
 [[ $SANDBOX -eq 1 ]] && MAIN+=(-f docker-compose.sandbox.yaml)
 [[ $OLLAMA -eq 1 ]] && MAIN+=(-f docker-compose.ollama.yaml)
@@ -102,6 +103,10 @@ PASSWORD="$(env_value CODE_BOX_PASSWORD)"
 [[ -n "$PASSWORD" ]] || die "Set CODE_BOX_PASSWORD in .env"
 [[ "$PASSWORD" != "changeme" ]] || die "CODE_BOX_PASSWORD is the placeholder 'changeme'; set a real password in .env"
 unset PASSWORD
+
+if [[ $PROFILE == "protected-agent" ]]; then
+  install -d -m 0700 data/config-protected
+fi
 
 if [[ $SANDBOX -eq 1 ]]; then
   docker info --format '{{json .Runtimes}}' 2>/dev/null | grep -q '"sysbox-runc"' \
@@ -133,6 +138,7 @@ PORT="$(env_value CODE_BOX_PORT)"
 case "$PROFILE" in
   local-functional) MODE="local functional development (no Docker inside the desktop)" ;;
   contained-build) MODE="contained build execution (Sysbox DinD sandbox)" ;;
+  protected-agent) MODE="protected agent operation (separate credential state)" ;;
 esac
 if [[ $SECCOMP_UNCONFINED -eq 1 ]]; then
   SECCOMP_MODE="unconfined compatibility override"
@@ -142,5 +148,6 @@ fi
 echo
 echo "code-box is up: $MODE"
 echo "  profile: $PROFILE"
+[[ $PROFILE == "protected-agent" ]] && echo "  credentials: scoped state at ./data/config-protected (egress remains broad)"
 echo "  seccomp: $SECCOMP_MODE"
 echo "  http://localhost:${PORT:-3000}  (plain HTTP — see docs/threat-model.md before exposing beyond this machine)"
