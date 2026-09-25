@@ -14,7 +14,7 @@ There are three available profiles:
 |---------|---------|------------------------|
 | **Local functional development** (default) | `scripts/up.sh` or `scripts/up.sh --profile local-functional` | No desktop Docker daemon or host socket; desktop retains `/config` and broad egress |
 | **Contained build execution** | `scripts/up.sh --profile contained-build` (needs [Sysbox](sandbox-docker.md#host-requirements)) | Sysbox sibling `dockerd` over mutual TLS; DinD sees `/workspace`, never `/config` |
-| **Protected agent operation** | `scripts/up.sh --profile protected-agent` | Separate credential state and read-only GitHub MCP defaults; egress remains broad until WG-07 |
+| **Protected agent operation** | `scripts/up.sh --profile protected-agent [--egress-proxy]` | Separate credential state and read-only GitHub MCP defaults; host proxy/firewall egress policy is opt-in |
 
 `--sandbox` remains a compatibility alias for `--profile contained-build`. Profile detail and guarantees: [profiles.md](profiles.md).
 
@@ -73,15 +73,16 @@ flowchart LR
 | KasmVNC publishes only to `127.0.0.1` by default | [`docker-compose.yaml`](../docker-compose.yaml), [`.env.example`](../.env.example), [`test-containment.sh`](../scripts/test-containment.sh) |
 | Container images use immutable digests and direct build artifacts have reviewed SHA-256 checksums | [`Dockerfile`](../Dockerfile), Compose files, [supply-chain.md](supply-chain.md), [`test-supply-chain.sh`](../scripts/test-supply-chain.sh) |
 | Protected agent operation mounts a separately provisioned `./data/config-protected` state rather than the operator's full `/config` | [`docker-compose.protected-agent.yaml`](../docker-compose.protected-agent.yaml), [profiles.md](profiles.md) |
+| Opt-in proxy policy restricts forwarded Docker bridge egress to the host-managed proxy | [`docker-compose.egress-proxy.yaml`](../docker-compose.egress-proxy.yaml), [`apply-egress-firewall.sh`](../scripts/apply-egress-firewall.sh), [egress-proxy.md](egress-proxy.md) |
 
 ## Deliberately open
 
 | Open | Why | Tighten |
 |------|-----|---------|
-| **`sandbox-net` has full egress** | Nested pulls and builds need registries and package mirrors | Host firewall on the `sandbox-net` bridge, an egress proxy, a private registry mirror |
-| **code-box has full egress** | Agents need model APIs, GitHub, package registries | Host firewall / egress proxy with an allowlist |
+| **`sandbox-net` has full egress without `--egress-proxy`** | Nested pulls and builds need registries and package mirrors | Use the host proxy/firewall policy in [egress-proxy.md](egress-proxy.md) |
+| **code-box has full egress without `--egress-proxy`** | Agents need model APIs, GitHub, package registries | Use the host proxy/firewall policy with an allowlist |
 | **GitHub MCP uses your full `gh` token scopes** (not read-only) | One login for `gh`, git, and agents | Log `gh` in with a fine-grained PAT scoped to specific repos. Set `GITHUB_READ_ONLY=1` or a narrower `GITHUB_TOOLSETS` for the MCP. Protect `main` with branch protection / required reviews |
-| **Protected-profile credentials can still be exfiltrated** | Credential state is reduced, but code-box egress is not restricted yet | Provision only scoped, read-only credentials in `./data/config-protected`; apply WG-07 egress policy before treating this profile as an exfiltration boundary |
+| **Protected-profile credentials can still be exfiltrated to allowlisted destinations and host-local services** | Proxy policy narrows forwarded external egress but WG-08 has not isolated host-local services | Provision only scoped, read-only credentials and keep the proxy allowlist narrow |
 | **Fetch MCP ignores robots.txt and can reach loopback and lab DNS** (`127.0.0.1`, `ollama`, `sandbox-dind`) | Agent doc fetches; same reach as `curl` in a terminal, so not a new hole | Egress policy (above) covers it too |
 | **Optional unconfined seccomp compatibility overlay** | Some older Docker/libseccomp combinations can block GUI or Electron syscalls. It is not needed for Chromium's sandbox; those processes run with `--no-sandbox` (below) | Keep Docker's default profile. Select `--seccomp-unconfined` only after confirming a specific compatibility failure, then update Docker/libseccomp and retest |
 | **Electron apps and Playwright Chromium run with `--no-sandbox`** | Chromium's own sandbox can't run in this container | Treat the browser as running at the desktop user's privilege. Don't browse untrusted sites with credentials loaded |

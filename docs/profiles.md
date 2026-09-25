@@ -6,7 +6,7 @@ Profiles name the intended security posture of a code-box session. They do not c
 |---------|---------|--------|------------------------|
 | **Local functional development** | `scripts/up.sh` or `scripts/up.sh --profile local-functional` | No Docker daemon in the desktop | Full `/config` state and broad egress remain available to the desktop agent |
 | **Contained build execution** | `scripts/up.sh --profile contained-build` | Sysbox DinD sibling over mutual TLS | `/config` is absent from DinD and nested containers; `/workspace` is shared read-write; broad egress remains available |
-| **Protected agent operation** | `scripts/up.sh --profile protected-agent` | Optional Sysbox DinD with `--sandbox` | Separate `./data/config-protected` state; read-only GitHub MCP defaults; broad egress remains until WG-07 |
+| **Protected agent operation** | `scripts/up.sh --profile protected-agent [--egress-proxy]` | Optional Sysbox DinD with `--sandbox` | Separate `./data/config-protected` state; read-only GitHub MCP defaults; proxy/firewall egress policy is opt-in |
 
 `scripts/up.sh --sandbox` remains a compatibility alias for `--profile contained-build`. New documentation and automation should use the profile name.
 
@@ -33,4 +33,4 @@ scripts/up.sh --profile protected-agent
 
 GitHub MCP defaults to `GITHUB_READ_ONLY=1` and `GITHUB_TOOLSETS=default`, excluding Actions. Use a fine-grained, read-only GitHub token in the protected state. The `gh` CLI has the same token access as the profile state, so token scopes remain the actual authorization boundary.
 
-The profile still has broad egress until WG-07. A prompt-injected agent can exfiltrate any credential placed in `./data/config-protected`; this profile reduces the credential set but is not an egress boundary. See [walled-garden-hardening-plan.md](walled-garden-hardening-plan.md) for the remaining controls.
+Without `--egress-proxy`, the profile still has broad egress. With it, the host-managed proxy and root firewall policy restrict forwarded external traffic. A prompt-injected agent can exfiltrate any credential placed in `./data/config-protected` to an allowlisted destination, and it can still reach host-local services until WG-08. See [egress-proxy.md](egress-proxy.md) and [walled-garden-hardening-plan.md](walled-garden-hardening-plan.md).

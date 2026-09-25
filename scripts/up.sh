@@ -5,6 +5,7 @@
 #   scripts/up.sh --profile contained-build [--build] [--ollama] [--gpu]
 #   scripts/up.sh --sandbox                               compatibility alias for contained-build
 #   scripts/up.sh --profile protected-agent [--sandbox]  scoped state; broad egress remains
+#   scripts/up.sh --profile protected-agent --egress-proxy
 #   scripts/up.sh --profile contained-build --down         stop (named volumes are kept)
 #   scripts/up.sh --seccomp-unconfined  compatibility exception; see threat model
 #
@@ -15,7 +16,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-SANDBOX=0 OLLAMA=0 GPU=0 BUILD=0 DOWN=0 SECCOMP_UNCONFINED=0
+SANDBOX=0 OLLAMA=0 GPU=0 BUILD=0 DOWN=0 SECCOMP_UNCONFINED=0 EGRESS_PROXY=0
 PROFILE="" PROFILE_EXPLICIT=0
 
 usage() {
@@ -44,6 +45,7 @@ while [[ $# -gt 0 ]]; do
     --build)   BUILD=1; shift ;;
     --down)    DOWN=1; shift ;;
     --seccomp-unconfined) SECCOMP_UNCONFINED=1; shift ;;
+    --egress-proxy) EGRESS_PROXY=1; shift ;;
     -h|--help) usage 0 ;;
     *) echo "Unknown option: $1" >&2; usage 1 ;;
   esac
@@ -70,11 +72,16 @@ case "$PROFILE" in
     ;;
 esac
 
+[[ $EGRESS_PROXY -eq 1 && $PROFILE == "local-functional" ]] \
+  && die "--egress-proxy requires contained-build or protected-agent"
+
 docker compose version >/dev/null 2>&1 || die "Docker Compose v2 not found (docker compose version)"
 
 DIND=(docker compose -f sandbox-dind/docker-compose.yaml)
+[[ $EGRESS_PROXY -eq 1 ]] && DIND+=(-f sandbox-dind/docker-compose.egress-proxy.yaml)
 MAIN=(docker compose -f docker-compose.yaml)
 [[ $PROFILE == "protected-agent" ]] && MAIN+=(-f docker-compose.protected-agent.yaml)
+[[ $EGRESS_PROXY -eq 1 ]] && MAIN+=(-f docker-compose.egress-proxy.yaml)
 [[ $SECCOMP_UNCONFINED -eq 1 ]] && MAIN+=(-f docker-compose.seccomp-unconfined.yaml)
 [[ $SANDBOX -eq 1 ]] && MAIN+=(-f docker-compose.sandbox.yaml)
 [[ $OLLAMA -eq 1 ]] && MAIN+=(-f docker-compose.ollama.yaml)
@@ -106,6 +113,12 @@ unset PASSWORD
 
 if [[ $PROFILE == "protected-agent" ]]; then
   install -d -m 0700 data/config-protected
+fi
+
+if [[ $EGRESS_PROXY -eq 1 ]]; then
+  [[ -n "$(env_value EGRESS_PROXY_URL)" ]] || die "Set EGRESS_PROXY_URL in .env"
+  [[ $SANDBOX -eq 0 || -n "$(env_value DIND_EGRESS_PROXY_URL)" ]] \
+    || die "Set DIND_EGRESS_PROXY_URL in .env for contained builds"
 fi
 
 if [[ $SANDBOX -eq 1 ]]; then
@@ -149,5 +162,6 @@ echo
 echo "code-box is up: $MODE"
 echo "  profile: $PROFILE"
 [[ $PROFILE == "protected-agent" ]] && echo "  credentials: scoped state at ./data/config-protected (egress remains broad)"
+[[ $EGRESS_PROXY -eq 1 ]] && echo "  egress: proxy configured; apply scripts/apply-egress-firewall.sh as root"
 echo "  seccomp: $SECCOMP_MODE"
 echo "  http://localhost:${PORT:-3000}  (plain HTTP — see docs/threat-model.md before exposing beyond this machine)"

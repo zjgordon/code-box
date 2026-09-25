@@ -1,0 +1,10 @@
+# Configure dockerd's registry pulls through the host-managed egress proxy.
+# Project containers must still receive proxy settings from their project or
+# build configuration; the firewall prevents direct external bypasses.
+
+services:
+  sandbox-dind:
+    environment:
+      HTTP_PROXY: ${DIND_EGRESS_PROXY_URL:?Set DIND_EGRESS_PROXY_URL in .env}
+      HTTPS_PROXY: ${DIND_EGRESS_PROXY_URL:?Set DIND_EGRESS_PROXY_URL in .env}
+      NO_PROXY: ${DIND_EGRESS_PROXY_NO_PROXY:-localhost,127.0.0.1,::1,code-box,sandbox-dind}

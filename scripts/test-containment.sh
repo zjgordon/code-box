@@ -174,6 +174,17 @@ check_profile_selection() {
     || fail "protected-agent --sandbox does not select both overlays"
   grep -q 'sandbox-dind/docker-compose.yaml down' "$profile_log" \
     || fail "protected-agent --sandbox does not select the DinD stack"
+
+  : >"$profile_log"
+  PATH="$fake_bin:$PATH" CODE_BOX_PROFILE_LOG="$profile_log" \
+    scripts/up.sh --profile protected-agent --egress-proxy --down >/dev/null
+  grep -q 'docker-compose.egress-proxy.yaml down' "$profile_log" \
+    || fail "--egress-proxy does not select the code-box proxy overlay"
+
+  if PATH="$fake_bin:$PATH" CODE_BOX_PROFILE_LOG="$profile_log" \
+    scripts/up.sh --profile local-functional --egress-proxy --down >/dev/null 2>&1; then
+    fail "local-functional unexpectedly accepted --egress-proxy"
+  fi
 }
 
 check_protected_profile_configuration() {
@@ -190,6 +201,23 @@ check_protected_profile_configuration() {
     || fail "protected-agent does not enable read-only GitHub MCP"
   grep -q 'GITHUB_TOOLSETS: default' "$TEST_DIR/protected-profile.yaml" \
     || fail "protected-agent does not narrow GitHub MCP toolsets"
+}
+
+check_egress_proxy_configuration() {
+  EGRESS_PROXY_URL=http://192.0.2.10:3128 \
+    CODE_BOX_USER=containment-test CODE_BOX_PASSWORD=containment-test-password \
+    CODE_BOX_BIND_ADDRESS=127.0.0.1 \
+    docker compose -f docker-compose.yaml -f docker-compose.egress-proxy.yaml config \
+      >"$TEST_DIR/egress-proxy.yaml"
+  grep -q 'HTTP_PROXY: http://192.0.2.10:3128' "$TEST_DIR/egress-proxy.yaml" \
+    || fail "code-box egress proxy is not configured"
+
+  DIND_EGRESS_PROXY_URL=http://192.0.2.10:3128 \
+    docker compose -f sandbox-dind/docker-compose.yaml \
+      -f sandbox-dind/docker-compose.egress-proxy.yaml config \
+      >"$TEST_DIR/dind-egress-proxy.yaml"
+  grep -q 'HTTPS_PROXY: http://192.0.2.10:3128' "$TEST_DIR/dind-egress-proxy.yaml" \
+    || fail "sandbox DinD egress proxy is not configured"
 }
 
 check_pids_limit() {
@@ -298,6 +326,7 @@ check_resource_configuration
 check_supply_chain_configuration
 check_profile_selection
 check_protected_profile_configuration
+check_egress_proxy_configuration
 scripts/up.sh --help | grep -q -- '--seccomp-unconfined' \
   || fail "up.sh does not expose the seccomp compatibility option"
 

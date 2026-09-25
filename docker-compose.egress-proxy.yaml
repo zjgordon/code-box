@@ -1,0 +1,12 @@
+# Opt-in egress proxy wiring. Use only with scripts/up.sh --egress-proxy
+# after the host-managed proxy and firewall policy are configured.
+
+services:
+  code-box:
+    environment:
+      HTTP_PROXY: ${EGRESS_PROXY_URL:?Set EGRESS_PROXY_URL in .env}
+      HTTPS_PROXY: ${EGRESS_PROXY_URL:?Set EGRESS_PROXY_URL in .env}
+      http_proxy: ${EGRESS_PROXY_URL:?Set EGRESS_PROXY_URL in .env}
+      https_proxy: ${EGRESS_PROXY_URL:?Set EGRESS_PROXY_URL in .env}
+      NO_PROXY: ${EGRESS_PROXY_NO_PROXY:-localhost,127.0.0.1,::1,ollama,sandbox-dind}
+      no_proxy: ${EGRESS_PROXY_NO_PROXY:-localhost,127.0.0.1,::1,ollama,sandbox-dind}

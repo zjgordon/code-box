@@ -129,6 +129,8 @@ The profiles describe security outcomes, not merely Compose file combinations. E
 
 **Intent:** make outbound network access an explicit policy rather than an implicit capability of code-box and nested builds.
 
+**Status:** proxy wiring, host firewall script, and static configuration tests are implemented. Root-level integration validation remains pending: apply the policy on a disposable Docker host, prove proxy allowlist access succeeds, and prove direct external/DNS/proxy-bypass access fails.
+
 **Expected commit scope:** one selected enforcement mechanism, profile integration, host prerequisites, allowlist configuration, observability, and integration tests.
 
 **Design decision required before implementation:** compare a host firewall on Docker bridges, an authenticated/transparent egress proxy, and a private registry/package mirror. Compose network declarations alone cannot reliably enforce a host-level egress boundary.
