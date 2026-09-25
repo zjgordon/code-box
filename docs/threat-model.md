@@ -74,6 +74,7 @@ flowchart LR
 | Container images use immutable digests and direct build artifacts have reviewed SHA-256 checksums | [`Dockerfile`](../Dockerfile), Compose files, [supply-chain.md](supply-chain.md), [`test-supply-chain.sh`](../scripts/test-supply-chain.sh) |
 | Protected agent operation mounts a separately provisioned `./data/config-protected` state rather than the operator's full `/config` | [`docker-compose.protected-agent.yaml`](../docker-compose.protected-agent.yaml), [profiles.md](profiles.md) |
 | Opt-in proxy policy restricts forwarded Docker bridge egress to the host-managed proxy | [`docker-compose.egress-proxy.yaml`](../docker-compose.egress-proxy.yaml), [`apply-egress-firewall.sh`](../scripts/apply-egress-firewall.sh), [egress-proxy.md](egress-proxy.md) |
+| Opt-in sandbox isolation policy blocks new sandbox-dind connections to code-box while retaining dockerd TLS replies | [`apply-sandbox-isolation.sh`](../scripts/apply-sandbox-isolation.sh), [sandbox-isolation.md](sandbox-isolation.md) |
 
 ## Deliberately open
 
@@ -89,7 +90,7 @@ flowchart LR
 | **Passwordless `sudo` for the desktop user** (from the linuxserver base image) | Agents install packages ad hoc | Assume the agent is root *inside* code-box. The container is the boundary |
 | **code-box runs under the default `runc`**, not Sysbox | KasmVNC/Electron compatibility. Only DinD needs Sysbox | Combined with passwordless root inside the container, this remains a weaker boundary than the Sysbox DinD sibling. Keep the host kernel patched |
 | **KasmVNC is plain HTTP when explicitly exposed beyond loopback** (`CODE_BOX_BIND_ADDRESS=0.0.0.0`) | Trusted-LAN and reverse-proxy deployments need a host-accessible listener | Keep the default loopback bind. For any non-localhost access, put an [HTTPS reverse proxy](deployment_examples.md) in front and restrict network access to it |
-| **Nested containers can reach code-box on `sandbox-net`** | code-box must join `sandbox-net` to reach the daemon | Anything listening on `0.0.0.0` inside code-box (including KasmVNC :3000, which needs its login) is reachable from nested containers. Bind agent dev servers to `127.0.0.1` |
+| **Nested containers can reach code-box on `sandbox-net` without the isolation policy** | code-box must join `sandbox-net` to reach the daemon | Apply [sandbox-isolation.md](sandbox-isolation.md). Bind agent dev servers to `127.0.0.1` as defense in depth |
 | **`/workspace` is shared read-write with DinD** | Compose bind mounts must resolve on the daemon | Nested containers can modify source and leave root-owned files. Review diffs before pushing |
 
 ## Hardening checklist

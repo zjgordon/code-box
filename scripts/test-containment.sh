@@ -220,6 +220,11 @@ check_egress_proxy_configuration() {
     || fail "sandbox DinD egress proxy is not configured"
 }
 
+check_sandbox_isolation_script() {
+  bash -n scripts/apply-sandbox-isolation.sh
+  scripts/apply-sandbox-isolation.sh --help >/dev/null 2>&1
+}
+
 check_pids_limit() {
   echo "Checking Docker PID enforcement..."
   docker run --rm --pids-limit 64 --entrypoint sh "$IMAGE" -c '
@@ -327,6 +332,7 @@ check_supply_chain_configuration
 check_profile_selection
 check_protected_profile_configuration
 check_egress_proxy_configuration
+check_sandbox_isolation_script
 scripts/up.sh --help | grep -q -- '--seccomp-unconfined' \
   || fail "up.sh does not expose the seccomp compatibility option"
 

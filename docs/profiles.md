@@ -22,6 +22,8 @@ This profile starts the Sysbox DinD sibling and configures the desktop Docker CL
 
 Nested containers receive `/workspace`, but never `/config` or the host Docker socket. They can modify the shared workspace and have broad egress for registry pulls and package installation. This is a build containment boundary, not a protected-agent credential profile.
 
+After starting this profile, apply [sandbox-isolation.md](sandbox-isolation.md) to block new nested-container connections to code-box while retaining desktop-to-DinD TLS.
+
 ## Protected Agent Operation
 
 This profile replaces the operator's full `./data/config` mount with `./data/config-protected`, created with mode `0700` by `scripts/up.sh`. Provision only credentials an agent is allowed to read. A normal desktop login, full GitHub token, SSH keys, and provider OAuth state are not copied automatically.

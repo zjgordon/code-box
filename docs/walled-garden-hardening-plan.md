@@ -39,7 +39,7 @@ The profiles describe security outcomes, not merely Compose file combinations. E
 | WG-05 | Formalize profile selection and compatibility overrides | All | [x] | WG-01, WG-02, WG-03 |
 | WG-06 | Separate and scope credentials and MCP capabilities | Protected agent operation | [x] | WG-05 |
 | WG-07 | Design and implement outbound egress controls | Contained build execution, Protected agent operation | [ ] | WG-05, WG-06 |
-| WG-08 | Reduce nested-container access to code-box services | Contained build execution, Protected agent operation | [ ] | WG-07 |
+| WG-08 | Reduce nested-container access to code-box services | Contained build execution, Protected agent operation | [x] | WG-07 |
 | WG-09 | Reconcile documentation, examples, and release checks | All | [ ] | WG-01 through WG-08 |
 
 ## WG-00: Disposable Containment Smoke Tests
@@ -142,6 +142,8 @@ The profiles describe security outcomes, not merely Compose file combinations. E
 ## WG-08: Nested-to-Desktop Network Reduction
 
 **Intent:** stop workloads launched by sandbox-dind from reaching KasmVNC and arbitrary services listening in code-box.
+
+**Status:** root-applied stateful isolation script, static checks, and nested-container integration validation are complete.
 
 **Expected commit scope:** network topology or host-firewall rules, service bind-address guidance, integration tests, and threat-model updates.
 
