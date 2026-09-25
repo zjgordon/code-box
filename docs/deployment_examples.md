@@ -2,7 +2,7 @@
 
 Same Compose pieces — `code-box`, GPU-backed [Ollama](ollama.md), contained [Docker via Sysbox](sandbox-docker.md) — different network edge. Reverse proxy, TLS, and firewall stay off `sandbox-net`. NVIDIA Container Toolkit attaches the GPU to Ollama.
 
-KasmVNC serves plain HTTP on port 3000, bound to all interfaces. Plain HTTP is only appropriate on a single local workstation. For anything else (LAN, and especially the internet), terminate HTTPS at a reverse proxy, and don't publish `:3000` beyond the proxy. See [threat-model.md](threat-model.md) for what else to tighten.
+KasmVNC serves plain HTTP on port 3000, bound to `127.0.0.1` by default. Plain HTTP is appropriate only on a single local workstation. For LAN or internet access, set `CODE_BOX_BIND_ADDRESS=0.0.0.0`, terminate HTTPS at a reverse proxy, and restrict network access so clients cannot reach `:3000` directly. See [threat-model.md](threat-model.md) for what else to tighten.
 
 ## Laptop — localhost HTTP
 
@@ -25,7 +25,7 @@ flowchart LR
 
 ## LAN server — HTTP reverse proxy
 
-LAN clients reach `code-box` through an HTTP reverse proxy. Fine for a trusted home LAN; KasmVNC credentials cross the network in cleartext, so prefer the HTTPS layout below on shared networks. The proxy is the published HTTP front door. GPU and contained Docker stay on the server.
+LAN clients reach `code-box` through an HTTP reverse proxy. Set `CODE_BOX_BIND_ADDRESS=0.0.0.0` on the host so the proxy can reach code-box, then firewall port 3000 from LAN clients. HTTP is only appropriate for a trusted home LAN because KasmVNC credentials cross the network in cleartext; prefer the HTTPS layout below on shared networks. The proxy is the published HTTP front door. GPU and contained Docker stay on the server.
 
 ```mermaid
 flowchart LR
@@ -46,7 +46,7 @@ flowchart LR
 
 ## Personal server — HTTPS reverse proxy
 
-Internet clients reach `code-box` through an HTTPS reverse proxy. TLS terminates at the proxy. GPU and contained Docker stay on the server.
+Internet clients reach `code-box` through an HTTPS reverse proxy. Set `CODE_BOX_BIND_ADDRESS=0.0.0.0` only when the proxy cannot reach the loopback listener, firewall port 3000 from clients, and terminate TLS at the proxy. GPU and contained Docker stay on the server.
 
 ```mermaid
 flowchart LR

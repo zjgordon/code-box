@@ -33,7 +33,7 @@ The profiles describe security outcomes, not merely Compose file combinations. E
 |----|---------------------|---------|--------|------------|
 | WG-00 | Add a disposable containment smoke-test harness | All | [x] | None |
 | WG-01 | Make Docker's default seccomp profile the default | All | [x] | WG-00 |
-| WG-02 | Bind the desktop to loopback by default | All | [ ] | WG-00 |
+| WG-02 | Bind the desktop to loopback by default | All | [x] | WG-00 |
 | WG-03 | Bound process, CPU, memory, and log/resource exhaustion | All | [ ] | WG-00 |
 | WG-04 | Pin and verify build and runtime supply-chain inputs | All | [ ] | WG-00 |
 | WG-05 | Formalize profile selection and compatibility overrides | All | [ ] | WG-01, WG-02, WG-03 |

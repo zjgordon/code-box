@@ -45,7 +45,7 @@ flowchart LR
     ollama[ollama]
   end
   internet[Internet]
-  browser -->|"HTTP :3000 (KasmVNC login)"| codebox
+  browser -->|"HTTP localhost:3000 (KasmVNC login)"| codebox
   agents -->|"TLS :2376 on sandbox-net"| dind
   agents -->|ollama-net| ollama
   codebox --> internet
@@ -67,6 +67,7 @@ flowchart LR
 | Credentials live on the `/config` volume and are not baked into the image. TLS PEMs and `.env` are gitignored | [`.gitignore`](../.gitignore), [github.md](github.md) |
 | KasmVNC refuses to start without credentials (`.env.example` ships a blank password; `up.sh` also rejects `changeme`) | [`.env.example`](../.env.example), [`scripts/up.sh`](../scripts/up.sh) |
 | code-box uses Docker's default seccomp profile; the unconfined exception is a separate, explicit compatibility overlay | [`docker-compose.yaml`](../docker-compose.yaml), [`docker-compose.seccomp-unconfined.yaml`](../docker-compose.seccomp-unconfined.yaml), [`test-containment.sh`](../scripts/test-containment.sh) |
+| KasmVNC publishes only to `127.0.0.1` by default | [`docker-compose.yaml`](../docker-compose.yaml), [`.env.example`](../.env.example), [`test-containment.sh`](../scripts/test-containment.sh) |
 
 ## Deliberately open
 
@@ -80,7 +81,7 @@ flowchart LR
 | **Electron apps and Playwright Chromium run with `--no-sandbox`** | Chromium's own sandbox can't run in this container | Treat the browser as running at the desktop user's privilege. Don't browse untrusted sites with credentials loaded |
 | **Passwordless `sudo` for the desktop user** (from the linuxserver base image) | Agents install packages ad hoc | Assume the agent is root *inside* code-box. The container is the boundary |
 | **code-box runs under the default `runc`**, not Sysbox | KasmVNC/Electron compatibility. Only DinD needs Sysbox | Combined with passwordless root inside the container, this remains a weaker boundary than the Sysbox DinD sibling. Keep the host kernel patched |
-| **KasmVNC is plain HTTP on all interfaces** (port 3000) | Easy localhost and LAN use | On anything beyond a single workstation, put an [HTTPS reverse proxy](deployment_examples.md) in front and/or bind to loopback with a `docker-compose.override.yaml` (`ports: ["127.0.0.1:3000:3000"]`) |
+| **KasmVNC is plain HTTP when explicitly exposed beyond loopback** (`CODE_BOX_BIND_ADDRESS=0.0.0.0`) | Trusted-LAN and reverse-proxy deployments need a host-accessible listener | Keep the default loopback bind. For any non-localhost access, put an [HTTPS reverse proxy](deployment_examples.md) in front and restrict network access to it |
 | **Nested containers can reach code-box on `sandbox-net`** | code-box must join `sandbox-net` to reach the daemon | Anything listening on `0.0.0.0` inside code-box (including KasmVNC :3000, which needs its login) is reachable from nested containers. Bind agent dev servers to `127.0.0.1` |
 | **`/workspace` is shared read-write with DinD** | Compose bind mounts must resolve on the daemon | Nested containers can modify source and leave root-owned files. Review diffs before pushing |
 

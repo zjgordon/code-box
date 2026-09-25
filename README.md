@@ -36,7 +36,7 @@ scripts/up.sh --sandbox --build
 
 Add `--ollama` (and `--gpu`) for the local-model sibling; `--down` stops the same set.
 
-Open [http://localhost:3000](http://localhost:3000) (or `http://<host-ip>:3000` on a trusted LAN; see [Security](#security)), sign in, then run `claude login` in a desktop terminal. For OpenCode, use `/connect` in the TUI to configure an LLM provider. To clone and manage GitHub repos over SSH (MFA-compatible), see [docs/github.md](docs/github.md). Agents use Playwright, GitHub, and Fetch MCP; see [docs/mcp.md](docs/mcp.md) (Playwright details: [docs/browser.md](docs/browser.md)). For other layouts (LAN reverse proxy, HTTPS on a personal server), see [docs/deployment_examples.md](docs/deployment_examples.md).
+Open [http://localhost:3000](http://localhost:3000), sign in, then run `claude login` in a desktop terminal. KasmVNC binds to loopback by default. To allow trusted-LAN or reverse-proxy access, set `CODE_BOX_BIND_ADDRESS=0.0.0.0` in `.env`; because KasmVNC is plain HTTP, use HTTPS for any non-localhost access. For OpenCode, use `/connect` in the TUI to configure an LLM provider. To clone and manage GitHub repos over SSH (MFA-compatible), see [docs/github.md](docs/github.md). Agents use Playwright, GitHub, and Fetch MCP; see [docs/mcp.md](docs/mcp.md) (Playwright details: [docs/browser.md](docs/browser.md)). For other layouts (LAN reverse proxy, HTTPS on a personal server), see [docs/deployment_examples.md](docs/deployment_examples.md).
 
 Optional: set `CODE_BOX_PORT` in `.env` if host port `3000` is taken.
 
@@ -44,7 +44,7 @@ Resources (defaults work for agent/desktop use; override in `.env`): `CODE_BOX_M
 
 ## Security
 
-"Walled garden" is scoped, not absolute. Neither mode gives agents the host Docker socket. Sandbox mode keeps credentials (`/config`) out of the Docker daemon agents use, and keeps lab services off its network. The desktop uses Docker's default seccomp profile; an explicit compatibility exception is available only for hosts that need it. Egress is open, and the GitHub MCP uses your full `gh` token. KasmVNC is **plain HTTP on all interfaces**: fine on your own workstation, but anywhere else put an HTTPS reverse proxy in front ([deployment examples](docs/deployment_examples.md)). Full list and hardening checklist: [docs/threat-model.md](docs/threat-model.md).
+"Walled garden" is scoped, not absolute. Neither mode gives agents the host Docker socket. Sandbox mode keeps credentials (`/config`) out of the Docker daemon agents use, and keeps lab services off its network. The desktop uses Docker's default seccomp profile; an explicit compatibility exception is available only for hosts that need it. Egress is open, and the GitHub MCP uses your full `gh` token. KasmVNC is **plain HTTP on loopback by default**. If you deliberately bind it to a LAN interface, put an HTTPS reverse proxy in front ([deployment examples](docs/deployment_examples.md)). Full list and hardening checklist: [docs/threat-model.md](docs/threat-model.md).
 
 ## Optional: GitHub
 

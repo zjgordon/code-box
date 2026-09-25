@@ -7,7 +7,7 @@
 # Bootstrap:
 #   1. cp .env.example .env   # set CODE_BOX_USER and CODE_BOX_PASSWORD
 #   2. scripts/up.sh --build  (or: docker compose build && docker compose up -d)
-#   3. http://localhost:3000 — KasmVNC login (or http://<host-ip>:3000 on your LAN)
+#   3. http://localhost:3000 — KasmVNC login (loopback by default; see deployment examples for LAN)
 #   4. Terminal: claude login  (OAuth via Firefox; use manual flow if callback fails)
 #   5. OpenCode TUI: /connect   (configure LLM provider / API key)
 #
@@ -38,10 +38,10 @@ services:
     # Electron/Firefox benefit from a larger /dev/shm than the Docker default (64MB)
     shm_size: ${CODE_BOX_SHM_SIZE:-1gb}
 
-    # Plain HTTP on all host interfaces. Beyond a single workstation, front it with an HTTPS
-    # reverse proxy (docs/deployment_examples.md) or bind 127.0.0.1 in an override.
+    # Plain HTTP is loopback-only by default. Set CODE_BOX_BIND_ADDRESS=0.0.0.0 only for a
+    # trusted LAN or an HTTPS reverse proxy; see docs/deployment_examples.md.
     ports:
-      - "${CODE_BOX_PORT:-3000}:3000"
+      - "${CODE_BOX_BIND_ADDRESS:-127.0.0.1}:${CODE_BOX_PORT:-3000}:3000"
 
     environment:
       PUID: ${PUID:-1000}

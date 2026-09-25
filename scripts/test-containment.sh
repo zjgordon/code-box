@@ -34,21 +34,38 @@ require_command() {
 
 check_compose_config() {
   CODE_BOX_USER=containment-test CODE_BOX_PASSWORD=containment-test-password \
+    CODE_BOX_BIND_ADDRESS=127.0.0.1 \
     docker compose "$@" config --quiet
 }
 
 check_seccomp_configuration() {
   CODE_BOX_USER=containment-test CODE_BOX_PASSWORD=containment-test-password \
+    CODE_BOX_BIND_ADDRESS=127.0.0.1 \
     docker compose -f docker-compose.yaml config >"$TEST_DIR/default-compose.yaml"
   if grep -q 'seccomp=unconfined' "$TEST_DIR/default-compose.yaml"; then
     fail "base Compose configuration disables seccomp"
   fi
 
   CODE_BOX_USER=containment-test CODE_BOX_PASSWORD=containment-test-password \
+    CODE_BOX_BIND_ADDRESS=127.0.0.1 \
     docker compose -f docker-compose.yaml -f docker-compose.seccomp-unconfined.yaml config \
       >"$TEST_DIR/seccomp-unconfined-compose.yaml"
   grep -q 'seccomp=unconfined' "$TEST_DIR/seccomp-unconfined-compose.yaml" \
     || fail "seccomp compatibility overlay is not applied"
+}
+
+check_port_configuration() {
+  CODE_BOX_USER=containment-test CODE_BOX_PASSWORD=containment-test-password \
+    CODE_BOX_BIND_ADDRESS=127.0.0.1 \
+    docker compose -f docker-compose.yaml config >"$TEST_DIR/loopback-compose.yaml"
+  grep -q 'host_ip: 127.0.0.1' "$TEST_DIR/loopback-compose.yaml" \
+    || fail "base Compose configuration does not bind KasmVNC to loopback"
+
+  CODE_BOX_USER=containment-test CODE_BOX_PASSWORD=containment-test-password \
+    CODE_BOX_BIND_ADDRESS=0.0.0.0 \
+    docker compose -f docker-compose.yaml config >"$TEST_DIR/lan-compose.yaml"
+  grep -q 'host_ip: 0.0.0.0' "$TEST_DIR/lan-compose.yaml" \
+    || fail "LAN KasmVNC binding is not available through CODE_BOX_BIND_ADDRESS"
 }
 
 run_check() {
@@ -130,6 +147,7 @@ check_compose_config \
   -f docker-compose.ollama.gpu.yaml
 docker compose -f sandbox-dind/docker-compose.yaml config --quiet
 check_seccomp_configuration
+check_port_configuration
 scripts/up.sh --help | grep -q -- '--seccomp-unconfined' \
   || fail "up.sh does not expose the seccomp compatibility option"
 
