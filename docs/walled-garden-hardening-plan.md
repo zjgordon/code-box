@@ -34,7 +34,7 @@ The profiles describe security outcomes, not merely Compose file combinations. E
 | WG-00 | Add a disposable containment smoke-test harness | All | [x] | None |
 | WG-01 | Make Docker's default seccomp profile the default | All | [x] | WG-00 |
 | WG-02 | Bind the desktop to loopback by default | All | [x] | WG-00 |
-| WG-03 | Bound process, CPU, memory, and log/resource exhaustion | All | [ ] | WG-00 |
+| WG-03 | Bound process, CPU, memory, and log/resource exhaustion | All | [x] | WG-00 |
 | WG-04 | Pin and verify build and runtime supply-chain inputs | All | [ ] | WG-00 |
 | WG-05 | Formalize profile selection and compatibility overrides | All | [ ] | WG-01, WG-02, WG-03 |
 | WG-06 | Separate and scope credentials and MCP capabilities | Protected agent operation | [ ] | WG-05 |
@@ -91,7 +91,7 @@ The profiles describe security outcomes, not merely Compose file combinations. E
 
 **Implementation direction:** add PID limits to every long-running service, add a CPU limit to DinD, and choose bounded Docker log rotation. Evaluate a storage quota or documented host-volume sizing for DinD before claiming Docker image storage is bounded.
 
-**Acceptance:** rendered Compose settings include explicit limits for every service. A controlled process-limit test fails inside the disposable target without impairing the host or other containers.
+**Acceptance:** rendered Compose settings include explicit limits for every service. A controlled process-limit test fails inside the disposable target without impairing the host or other containers. Docker image storage is documented as a host-volume capacity policy because Compose does not provide a portable quota control.
 
 ## WG-04: Reproducible and Verified Supply Chain
 

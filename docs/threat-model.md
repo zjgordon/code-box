@@ -63,7 +63,7 @@ flowchart LR
 | sandbox-dind publishes no host ports and is reachable only on `sandbox-net` | [`sandbox-dind/docker-compose.yaml`](../sandbox-dind/docker-compose.yaml) |
 | `/config` (tokens, SSH keys, agent auth) is never mounted into DinD. Nested containers see `/workspace` only | [`sandbox-dind/docker-compose.yaml`](../sandbox-dind/docker-compose.yaml) |
 | Lab stacks (Traefik, Gitea, Ollama, proxies) stay off `sandbox-net`. The Ollama loopback proxy binds `127.0.0.1` only, so nested containers can't reach it through code-box | [`docker-compose.ollama.yaml`](../docker-compose.ollama.yaml), [ollama.md](ollama.md) |
-| Resource limits: memory/CPU on code-box, memory on sandbox-dind and Ollama | compose files, `.env` overrides |
+| Resource limits: memory, CPU, PIDs, and bounded local logs on code-box, sandbox-dind, Ollama, and the Ollama proxy | compose files, `.env` overrides, [`test-containment.sh`](../scripts/test-containment.sh) |
 | Credentials live on the `/config` volume and are not baked into the image. TLS PEMs and `.env` are gitignored | [`.gitignore`](../.gitignore), [github.md](github.md) |
 | KasmVNC refuses to start without credentials (`.env.example` ships a blank password; `up.sh` also rejects `changeme`) | [`.env.example`](../.env.example), [`scripts/up.sh`](../scripts/up.sh) |
 | code-box uses Docker's default seccomp profile; the unconfined exception is a separate, explicit compatibility overlay | [`docker-compose.yaml`](../docker-compose.yaml), [`docker-compose.seccomp-unconfined.yaml`](../docker-compose.seccomp-unconfined.yaml), [`test-containment.sh`](../scripts/test-containment.sh) |
@@ -95,6 +95,7 @@ flowchart LR
 - [ ] Egress policy on the host if agents or nested builds shouldn't reach arbitrary hosts.
 - [ ] Keep Traefik, Gitea, Ollama, and other lab services off `sandbox-net`.
 - [ ] Rotate DinD TLS certs periodically: `FORCE=1 ./scripts/generate-dind-certs.sh`, then recreate both stacks.
+- [ ] Monitor Docker host disk usage. `dind-storage` is intentionally not quota-managed by Compose.
 
 ## Testing seccomp
 

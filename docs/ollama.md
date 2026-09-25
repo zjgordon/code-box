@@ -85,7 +85,7 @@ docker compose -f docker-compose.yaml -f docker-compose.sandbox.yaml -f docker-c
 
 To make that the default for `docker compose up`, set `COMPOSE_FILE` in `.env` (see `.env.example`).
 
-`code-box` waits until Ollama is healthy. Default memory limit is 8G (`OLLAMA_MEMORY_LIMIT`). Pin `OLLAMA_VERSION` or `OLLAMA_HOST_PORT` in `.env`. If the host already binds 11434, set `OLLAMA_HOST_PORT` to a free loopback port; Compose DNS remains `ollama:11434`.
+`code-box` waits until Ollama is healthy. Defaults are 8G memory, 4.0 CPUs, and 1024 PIDs (`OLLAMA_MEMORY_LIMIT`, `OLLAMA_CPUS`, and `OLLAMA_PIDS_LIMIT`). Pin `OLLAMA_VERSION` or `OLLAMA_HOST_PORT` in `.env`. If the host already binds 11434, set `OLLAMA_HOST_PORT` to a free loopback port; Compose DNS remains `ollama:11434`.
 
 From inside `code-box`, `ollama` should resolve to `172.30.114.10` (and possibly a `default`-network IP) and both curls should return a JSON model list:
 

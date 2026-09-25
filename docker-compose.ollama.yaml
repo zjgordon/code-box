@@ -22,6 +22,11 @@ services:
       # http://ollama:11434 (the image default of 127.0.0.1 would not).
       OLLAMA_HOST: 0.0.0.0:11434
       OLLAMA_ORIGINS: "*"
+    logging:
+      driver: local
+      options:
+        max-size: ${CONTAINER_LOG_MAX_SIZE:-10m}
+        max-file: "${CONTAINER_LOG_MAX_FILE:-3}"
     volumes:
       - ollama:/root/.ollama
     ports:
@@ -41,6 +46,8 @@ services:
       resources:
         limits:
           memory: ${OLLAMA_MEMORY_LIMIT:-8G}
+          cpus: "${OLLAMA_CPUS:-4.0}"
+          pids: ${OLLAMA_PIDS_LIMIT:-1024}
 
   # OpenCode discovers Ollama at 127.0.0.1:11434. Bind loopback only so nested
   # DinD on sandbox-net cannot reach the API via code-box's sandbox IP.
@@ -49,6 +56,11 @@ services:
     container_name: ollama-localhost-proxy
     restart: unless-stopped
     network_mode: "service:code-box"
+    logging:
+      driver: local
+      options:
+        max-size: ${CONTAINER_LOG_MAX_SIZE:-10m}
+        max-file: "${CONTAINER_LOG_MAX_FILE:-3}"
     # Static IP — sidecar shares code-box's netns, not its /etc/hosts or resolv.conf.
     command: ["TCP-LISTEN:11434,bind=127.0.0.1,fork,reuseaddr", "TCP:172.30.114.10:11434"]
     depends_on:
@@ -56,6 +68,12 @@ services:
         condition: service_healthy
       code-box:
         condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: ${OLLAMA_PROXY_MEMORY_LIMIT:-128M}
+          cpus: "${OLLAMA_PROXY_CPUS:-0.25}"
+          pids: ${OLLAMA_PROXY_PIDS_LIMIT:-128}
 
   code-box:
     environment:

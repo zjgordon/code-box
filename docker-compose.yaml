@@ -37,6 +37,11 @@ services:
 
     # Electron/Firefox benefit from a larger /dev/shm than the Docker default (64MB)
     shm_size: ${CODE_BOX_SHM_SIZE:-1gb}
+    logging:
+      driver: local
+      options:
+        max-size: ${CONTAINER_LOG_MAX_SIZE:-10m}
+        max-file: "${CONTAINER_LOG_MAX_FILE:-3}"
 
     # Plain HTTP is loopback-only by default. Set CODE_BOX_BIND_ADDRESS=0.0.0.0 only for a
     # trusted LAN or an HTTPS reverse proxy; see docs/deployment_examples.md.
@@ -61,3 +66,4 @@ services:
         limits:
           memory: ${CODE_BOX_MEMORY_LIMIT:-16G}
           cpus: "${CODE_BOX_CPUS:-8.0}"
+          pids: ${CODE_BOX_PIDS_LIMIT:-4096}

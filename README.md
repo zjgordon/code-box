@@ -40,7 +40,7 @@ Open [http://localhost:3000](http://localhost:3000), sign in, then run `claude l
 
 Optional: set `CODE_BOX_PORT` in `.env` if host port `3000` is taken.
 
-Resources (defaults work for agent/desktop use; override in `.env`): `CODE_BOX_MEMORY_LIMIT` (16G), `CODE_BOX_CPUS` (8.0), `CODE_BOX_SHM_SIZE` (1gb).
+Resources are bounded by default and can be overridden in `.env`: code-box has `CODE_BOX_MEMORY_LIMIT` (16G), `CODE_BOX_CPUS` (8.0), and `CODE_BOX_PIDS_LIMIT` (4096); Sysbox DinD has `SANDBOX_DIND_MEMORY_LIMIT` (8G), `SANDBOX_DIND_CPUS` (4.0), and `SANDBOX_DIND_PIDS_LIMIT` (4096). Container logs use Docker's local driver with `CONTAINER_LOG_MAX_SIZE` (10m) and `CONTAINER_LOG_MAX_FILE` (3).
 
 ## Security
 

@@ -89,7 +89,7 @@ docker compose -f docker-compose.yaml -f docker-compose.sandbox.yaml up -d
 
 Wait until dind is healthy (`docker compose -f sandbox-dind/docker-compose.yaml ps` shows `healthy`, or `docker info` succeeds inside the desktop) before the first `docker build`. First-boot overlay init can take tens of seconds.
 
-Default `docker compose up` does not use the sibling. Nested builds share host RAM; default limit is 8G (`SANDBOX_DIND_MEMORY_LIMIT` from the repo root).
+Default `docker compose up` does not use the sibling. Nested builds run under the sibling's default 8G memory, 4.0 CPU, and 4096 PID limits (`SANDBOX_DIND_MEMORY_LIMIT`, `SANDBOX_DIND_CPUS`, and `SANDBOX_DIND_PIDS_LIMIT` from the repo root). The Docker image volume (`dind-storage`) has no portable Compose quota: monitor host disk with `docker system df` and size the Docker host volume appropriately.
 
 After changing dind volumes (for example adding the `/workspace` bind), recreate that stack so leftover dind-local directories under `/workspace` are hidden by the bind:
 

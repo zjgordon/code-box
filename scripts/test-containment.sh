@@ -68,6 +68,63 @@ check_port_configuration() {
     || fail "LAN KasmVNC binding is not available through CODE_BOX_BIND_ADDRESS"
 }
 
+check_resource_configuration() {
+  CODE_BOX_USER=containment-test CODE_BOX_PASSWORD=containment-test-password \
+    CODE_BOX_BIND_ADDRESS=127.0.0.1 \
+    docker compose -f docker-compose.yaml config >"$TEST_DIR/code-box-resources.yaml"
+  grep -q 'pids: 4096' "$TEST_DIR/code-box-resources.yaml" \
+    || fail "code-box PID limit is missing"
+  grep -q 'cpus: 8' "$TEST_DIR/code-box-resources.yaml" \
+    || fail "code-box CPU limit is missing"
+  [[ "$(grep -c 'driver: local' "$TEST_DIR/code-box-resources.yaml")" -eq 1 ]] \
+    || fail "code-box local log driver is missing"
+
+  docker compose -f sandbox-dind/docker-compose.yaml config >"$TEST_DIR/dind-resources.yaml"
+  grep -q 'pids: 4096' "$TEST_DIR/dind-resources.yaml" \
+    || fail "sandbox DinD PID limit is missing"
+  grep -q 'cpus: 4' "$TEST_DIR/dind-resources.yaml" \
+    || fail "sandbox DinD CPU limit is missing"
+  [[ "$(grep -c 'driver: local' "$TEST_DIR/dind-resources.yaml")" -eq 1 ]] \
+    || fail "sandbox DinD local log driver is missing"
+
+  CODE_BOX_USER=containment-test CODE_BOX_PASSWORD=containment-test-password \
+    CODE_BOX_BIND_ADDRESS=127.0.0.1 \
+    docker compose -f docker-compose.yaml -f docker-compose.ollama.yaml config \
+      >"$TEST_DIR/ollama-resources.yaml"
+  grep -q 'pids: 1024' "$TEST_DIR/ollama-resources.yaml" \
+    || fail "Ollama PID limit is missing"
+  grep -q 'cpus: 4' "$TEST_DIR/ollama-resources.yaml" \
+    || fail "Ollama CPU limit is missing"
+  grep -q 'pids: 128' "$TEST_DIR/ollama-resources.yaml" \
+    || fail "Ollama proxy PID limit is missing"
+  grep -q 'cpus: 0.25' "$TEST_DIR/ollama-resources.yaml" \
+    || fail "Ollama proxy CPU limit is missing"
+  [[ "$(grep -c 'driver: local' "$TEST_DIR/ollama-resources.yaml")" -eq 3 ]] \
+    || fail "Ollama services do not all use the local log driver"
+}
+
+check_pids_limit() {
+  echo "Checking Docker PID enforcement..."
+  docker run --rm --pids-limit 64 --entrypoint sh "$IMAGE" -c '
+    (
+      i=0
+      while [ "$i" -lt 128 ]; do
+        sleep 30 >/dev/null 2>&1 &
+        i=$((i + 1))
+      done
+    ) &
+    filler=$!
+    wait "$filler"
+    limited=0
+    while IFS=" " read -r key value; do
+      case "$key" in
+        max) [ "$value" -gt 0 ] && limited=1 ;;
+      esac
+    done < /sys/fs/cgroup/pids.events
+    [ "$limited" -eq 1 ]
+  ' >/dev/null 2>&1 || fail "Docker PID limit did not constrain a disposable workload"
+}
+
 run_check() {
   local description="$1"
   shift
@@ -148,6 +205,7 @@ check_compose_config \
 docker compose -f sandbox-dind/docker-compose.yaml config --quiet
 check_seccomp_configuration
 check_port_configuration
+check_resource_configuration
 scripts/up.sh --help | grep -q -- '--seccomp-unconfined' \
   || fail "up.sh does not expose the seccomp compatibility option"
 
@@ -156,6 +214,7 @@ docker run --rm --security-opt seccomp=unconfined --entrypoint sh "$IMAGE" \
   || fail "seccomp compatibility override is not active"
 
 run_sysbox_dind_check
+check_pids_limit
 
 echo "Starting disposable desktop with Docker's default seccomp profile..."
 docker run -d \

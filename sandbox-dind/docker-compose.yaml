@@ -23,6 +23,11 @@ services:
     environment:
       # Disable dockerd entrypoint auto-cert generation; we mount prebaked PEMs.
       DOCKER_TLS_CERTDIR: ""
+    logging:
+      driver: local
+      options:
+        max-size: ${CONTAINER_LOG_MAX_SIZE:-10m}
+        max-file: "${CONTAINER_LOG_MAX_FILE:-3}"
     volumes:
       - ../certs/server:/certs:ro
       # Same absolute path as code-box so compose bind mounts of /workspace/... work.
@@ -42,6 +47,8 @@ services:
       resources:
         limits:
           memory: ${SANDBOX_DIND_MEMORY_LIMIT:-8G}
+          cpus: "${SANDBOX_DIND_CPUS:-4.0}"
+          pids: ${SANDBOX_DIND_PIDS_LIMIT:-4096}
 
 networks:
   sandbox-net:
