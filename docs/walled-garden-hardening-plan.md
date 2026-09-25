@@ -38,9 +38,9 @@ The profiles describe security outcomes, not merely Compose file combinations. E
 | WG-04 | Pin and verify build and runtime supply-chain inputs | All | [x] | WG-00 |
 | WG-05 | Formalize profile selection and compatibility overrides | All | [x] | WG-01, WG-02, WG-03 |
 | WG-06 | Separate and scope credentials and MCP capabilities | Protected agent operation | [x] | WG-05 |
-| WG-07 | Design and implement outbound egress controls | Contained build execution, Protected agent operation | [ ] | WG-05, WG-06 |
+| WG-07 | Design and implement outbound egress controls | Contained build execution, Protected agent operation | [x] | WG-05, WG-06 |
 | WG-08 | Reduce nested-container access to code-box services | Contained build execution, Protected agent operation | [x] | WG-07 |
-| WG-09 | Reconcile documentation, examples, and release checks | All | [ ] | WG-01 through WG-08 |
+| WG-09 | Reconcile documentation, examples, and release checks | All | [x] | WG-01 through WG-08 |
 
 ## WG-00: Disposable Containment Smoke Tests
 
@@ -129,7 +129,7 @@ The profiles describe security outcomes, not merely Compose file combinations. E
 
 **Intent:** make outbound network access an explicit policy rather than an implicit capability of code-box and nested builds.
 
-**Status:** proxy wiring, host firewall script, and static configuration tests are implemented. Root-level integration validation remains pending: apply the policy on a disposable Docker host, prove proxy allowlist access succeeds, and prove direct external/DNS/proxy-bypass access fails.
+**Status:** proxy wiring, host firewall script, static configuration tests, and root-level integration validation are complete.
 
 **Expected commit scope:** one selected enforcement mechanism, profile integration, host prerequisites, allowlist configuration, observability, and integration tests.
 

@@ -36,7 +36,7 @@ scripts/up.sh --profile contained-build --build
 
 Add `--ollama` (and `--gpu`) for the local-model sibling; `--down` stops the same set. `--sandbox` remains a compatibility alias for `--profile contained-build`. See [docs/profiles.md](docs/profiles.md).
 
-**Protected agent operation.** Uses a separate, operator-provisioned `./data/config-protected` directory instead of the full credential state. GitHub MCP defaults to read-only and excludes Actions; outbound network access is still broad. See [docs/profiles.md](docs/profiles.md) before use:
+**Protected agent operation.** Uses a separate, operator-provisioned `./data/config-protected` directory instead of the full credential state. GitHub MCP defaults to read-only and excludes Actions; use `--egress-proxy` with the host policy when outbound access must be restricted. See [docs/profiles.md](docs/profiles.md) before use:
 
 ```bash
 scripts/up.sh --profile protected-agent
@@ -52,7 +52,7 @@ Resources are bounded by default and can be overridden in `.env`: code-box has `
 
 ## Security
 
-"Walled garden" is scoped, not absolute. Neither mode gives agents the host Docker socket. Sandbox mode keeps credentials (`/config`) out of the Docker daemon agents use, and keeps lab services off its network. The desktop uses Docker's default seccomp profile; an explicit compatibility exception is available only for hosts that need it. Egress is open, and the GitHub MCP uses your full `gh` token. KasmVNC is **plain HTTP on loopback by default**. If you deliberately bind it to a LAN interface, put an HTTPS reverse proxy in front ([deployment examples](docs/deployment_examples.md)). Full list and hardening checklist: [docs/threat-model.md](docs/threat-model.md).
+"Walled garden" is scoped, not absolute. No profile gives agents the host Docker socket. Contained builds keep credentials (`/config`) out of the Docker daemon agents use, and keep lab services off its network. The desktop uses Docker's default seccomp profile; an explicit compatibility exception is available only for hosts that need it. Local functional development has open egress and a full `gh` token; protected operation can opt into the host proxy/firewall policy. KasmVNC is **plain HTTP on loopback by default**. If you deliberately bind it to a LAN interface, put an HTTPS reverse proxy in front ([deployment examples](docs/deployment_examples.md)). Full list and hardening checklist: [docs/threat-model.md](docs/threat-model.md).
 
 ## Optional: GitHub
 
@@ -91,4 +91,5 @@ Use `docker compose build --no-cache` only when you need a fully clean rebuild. 
 | Host | Container |
 |------|-----------|
 | `./data/config` | `/config` |
+| `./data/config-protected` (protected profile only) | `/config` |
 | `./data/workspace` | `/workspace` |
