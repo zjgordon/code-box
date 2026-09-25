@@ -1,0 +1,9 @@
+# Compatibility overlay for Docker hosts where the default seccomp profile has a
+# confirmed desktop application incompatibility. This weakens the code-box
+# container boundary. Apply only with an explicit `-f` or
+# `scripts/up.sh --seccomp-unconfined`; it is never part of the base profile.
+
+services:
+  code-box:
+    security_opt:
+      - seccomp=unconfined

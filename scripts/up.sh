@@ -5,6 +5,7 @@
 #   scripts/up.sh --sandbox           walled garden (Sysbox DinD sibling over TLS)
 #   scripts/up.sh --sandbox --ollama --gpu --build
 #   scripts/up.sh --sandbox --down    stop (named volumes are kept)
+#   scripts/up.sh --seccomp-unconfined  compatibility exception; see threat model
 #
 # Wraps the existing compose files only — no extra services, mounts, or networks.
 # Explicit -f flags override COMPOSE_FILE from .env. See docs/threat-model.md.
@@ -13,7 +14,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-SANDBOX=0 OLLAMA=0 GPU=0 BUILD=0 DOWN=0
+SANDBOX=0 OLLAMA=0 GPU=0 BUILD=0 DOWN=0 SECCOMP_UNCONFINED=0
 
 usage() {
   sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
@@ -29,6 +30,7 @@ for arg in "$@"; do
     --gpu)     GPU=1 ;;
     --build)   BUILD=1 ;;
     --down)    DOWN=1 ;;
+    --seccomp-unconfined) SECCOMP_UNCONFINED=1 ;;
     -h|--help) usage 0 ;;
     *) echo "Unknown option: $arg" >&2; usage 1 ;;
   esac
@@ -40,6 +42,7 @@ docker compose version >/dev/null 2>&1 || die "Docker Compose v2 not found (dock
 
 DIND=(docker compose -f sandbox-dind/docker-compose.yaml)
 MAIN=(docker compose -f docker-compose.yaml)
+[[ $SECCOMP_UNCONFINED -eq 1 ]] && MAIN+=(-f docker-compose.seccomp-unconfined.yaml)
 [[ $SANDBOX -eq 1 ]] && MAIN+=(-f docker-compose.sandbox.yaml)
 [[ $OLLAMA -eq 1 ]] && MAIN+=(-f docker-compose.ollama.yaml)
 [[ $GPU -eq 1 ]] && MAIN+=(-f docker-compose.ollama.gpu.yaml)
@@ -100,6 +103,12 @@ if [[ $SANDBOX -eq 1 ]]; then
 else
   MODE="dev box (no Docker inside the desktop; add --sandbox for isolated Docker)"
 fi
+if [[ $SECCOMP_UNCONFINED -eq 1 ]]; then
+  SECCOMP_MODE="unconfined compatibility override"
+else
+  SECCOMP_MODE="Docker default profile"
+fi
 echo
 echo "code-box is up: $MODE"
+echo "  seccomp: $SECCOMP_MODE"
 echo "  http://localhost:${PORT:-3000}  (plain HTTP — see docs/threat-model.md before exposing beyond this machine)"

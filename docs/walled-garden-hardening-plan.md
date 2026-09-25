@@ -32,7 +32,7 @@ The profiles describe security outcomes, not merely Compose file combinations. E
 | ID | Commit-sized change | Profile | Status | Depends on |
 |----|---------------------|---------|--------|------------|
 | WG-00 | Add a disposable containment smoke-test harness | All | [x] | None |
-| WG-01 | Make Docker's default seccomp profile the default | All | [ ] | WG-00 |
+| WG-01 | Make Docker's default seccomp profile the default | All | [x] | WG-00 |
 | WG-02 | Bind the desktop to loopback by default | All | [ ] | WG-00 |
 | WG-03 | Bound process, CPU, memory, and log/resource exhaustion | All | [ ] | WG-00 |
 | WG-04 | Pin and verify build and runtime supply-chain inputs | All | [ ] | WG-00 |
@@ -67,9 +67,9 @@ The profiles describe security outcomes, not merely Compose file combinations. E
 
 **Expected commit scope:** Compose defaults, a clearly named opt-in compatibility override, threat-model and troubleshooting updates, and WG-00 assertions.
 
-**Implementation direction:** remove `seccomp=unconfined` from the base Compose service. Retain an ignored local override example for hosts that have a confirmed incompatibility. Do not make the compatibility exception implicit through an environment variable.
+**Implementation direction:** remove `seccomp=unconfined` from the base Compose service. Retain a separately named, explicit compatibility overlay for hosts that have a confirmed incompatibility. Do not make the compatibility exception implicit through an environment variable.
 
-**Acceptance:** default-profile smoke tests pass on the supported Docker Engine. The desktop starts, Cursor and VS Code run, Firefox opens, and Playwright MCP can navigate a local disposable page. The compatibility override changes the process status to `Seccomp: 0` and is not used by `scripts/up.sh` unless the operator explicitly selects it.
+**Acceptance:** default-profile smoke tests pass on the supported Docker Engine. The desktop starts, Cursor and VS Code run, Firefox opens, and the Playwright MCP wrapper starts. The compatibility overlay changes the process status to `Seccomp: 0` and is not used by `scripts/up.sh` unless the operator explicitly selects it.
 
 **Known observation:** the review host successfully booted the current image with `Seccomp: 2`; Firefox logged a user-namespace sandbox warning but remained running. This is a test case, not a reason to retain unconfined seccomp.
 

@@ -44,7 +44,7 @@ Resources (defaults work for agent/desktop use; override in `.env`): `CODE_BOX_M
 
 ## Security
 
-"Walled garden" is scoped, not absolute. Neither mode gives agents the host Docker socket. Sandbox mode keeps credentials (`/config`) out of the Docker daemon agents use, and keeps lab services off its network. Egress is open, the GitHub MCP uses your full `gh` token, and the desktop runs with `seccomp=unconfined`. KasmVNC is **plain HTTP on all interfaces**: fine on your own workstation, but anywhere else put an HTTPS reverse proxy in front ([deployment examples](docs/deployment_examples.md)). Full list and hardening checklist: [docs/threat-model.md](docs/threat-model.md).
+"Walled garden" is scoped, not absolute. Neither mode gives agents the host Docker socket. Sandbox mode keeps credentials (`/config`) out of the Docker daemon agents use, and keeps lab services off its network. The desktop uses Docker's default seccomp profile; an explicit compatibility exception is available only for hosts that need it. Egress is open, and the GitHub MCP uses your full `gh` token. KasmVNC is **plain HTTP on all interfaces**: fine on your own workstation, but anywhere else put an HTTPS reverse proxy in front ([deployment examples](docs/deployment_examples.md)). Full list and hardening checklist: [docs/threat-model.md](docs/threat-model.md).
 
 ## Optional: GitHub
 

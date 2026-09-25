@@ -37,6 +37,20 @@ check_compose_config() {
     docker compose "$@" config --quiet
 }
 
+check_seccomp_configuration() {
+  CODE_BOX_USER=containment-test CODE_BOX_PASSWORD=containment-test-password \
+    docker compose -f docker-compose.yaml config >"$TEST_DIR/default-compose.yaml"
+  if grep -q 'seccomp=unconfined' "$TEST_DIR/default-compose.yaml"; then
+    fail "base Compose configuration disables seccomp"
+  fi
+
+  CODE_BOX_USER=containment-test CODE_BOX_PASSWORD=containment-test-password \
+    docker compose -f docker-compose.yaml -f docker-compose.seccomp-unconfined.yaml config \
+      >"$TEST_DIR/seccomp-unconfined-compose.yaml"
+  grep -q 'seccomp=unconfined' "$TEST_DIR/seccomp-unconfined-compose.yaml" \
+    || fail "seccomp compatibility overlay is not applied"
+}
+
 run_check() {
   local description="$1"
   shift
@@ -101,8 +115,12 @@ docker info >/dev/null 2>&1 || fail "Docker daemon is not available"
 docker image inspect "$IMAGE" >/dev/null 2>&1 \
   || fail "image not found: $IMAGE (build it first or set CODE_BOX_TEST_IMAGE)"
 
+TEST_DIR="$(mktemp -d "${TMPDIR:-/tmp}/code-box-wg00.XXXXXX")"
+mkdir -p "$TEST_DIR/config" "$TEST_DIR/workspace"
+
 echo "Checking Compose configurations..."
 check_compose_config -f docker-compose.yaml
+check_compose_config -f docker-compose.yaml -f docker-compose.seccomp-unconfined.yaml
 check_compose_config -f docker-compose.yaml -f docker-compose.sandbox.yaml
 check_compose_config -f docker-compose.yaml -f docker-compose.ollama.yaml
 check_compose_config \
@@ -111,9 +129,13 @@ check_compose_config \
   -f docker-compose.ollama.yaml \
   -f docker-compose.ollama.gpu.yaml
 docker compose -f sandbox-dind/docker-compose.yaml config --quiet
+check_seccomp_configuration
+scripts/up.sh --help | grep -q -- '--seccomp-unconfined' \
+  || fail "up.sh does not expose the seccomp compatibility option"
 
-TEST_DIR="$(mktemp -d "${TMPDIR:-/tmp}/code-box-wg00.XXXXXX")"
-mkdir -p "$TEST_DIR/config" "$TEST_DIR/workspace"
+docker run --rm --security-opt seccomp=unconfined --entrypoint sh "$IMAGE" \
+  -c 'grep -q "^Seccomp:[[:space:]]*0$" /proc/1/status' \
+  || fail "seccomp compatibility override is not active"
 
 run_sysbox_dind_check
 

@@ -32,11 +32,8 @@ services:
     container_name: code-box
     restart: unless-stopped
 
-    # linuxserver KasmVNC guidance: GUI/Electron apps (Cursor, VS Code, Firefox) use syscalls
-    # that older Docker/libseccomp default profiles block. Not a Chromium-sandbox need (those
-    # run --no-sandbox). To test without it: docs/threat-model.md#testing-seccomp
-    security_opt:
-      - seccomp=unconfined
+    # Intentionally use Docker's default seccomp profile. See
+    # docker-compose.seccomp-unconfined.yaml for the explicit compatibility exception.
 
     # Electron/Firefox benefit from a larger /dev/shm than the Docker default (64MB)
     shm_size: ${CODE_BOX_SHM_SIZE:-1gb}

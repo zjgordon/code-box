@@ -66,6 +66,7 @@ flowchart LR
 | Resource limits: memory/CPU on code-box, memory on sandbox-dind and Ollama | compose files, `.env` overrides |
 | Credentials live on the `/config` volume and are not baked into the image. TLS PEMs and `.env` are gitignored | [`.gitignore`](../.gitignore), [github.md](github.md) |
 | KasmVNC refuses to start without credentials (`.env.example` ships a blank password; `up.sh` also rejects `changeme`) | [`.env.example`](../.env.example), [`scripts/up.sh`](../scripts/up.sh) |
+| code-box uses Docker's default seccomp profile; the unconfined exception is a separate, explicit compatibility overlay | [`docker-compose.yaml`](../docker-compose.yaml), [`docker-compose.seccomp-unconfined.yaml`](../docker-compose.seccomp-unconfined.yaml), [`test-containment.sh`](../scripts/test-containment.sh) |
 
 ## Deliberately open
 
@@ -75,10 +76,10 @@ flowchart LR
 | **code-box has full egress** | Agents need model APIs, GitHub, package registries | Host firewall / egress proxy with an allowlist |
 | **GitHub MCP uses your full `gh` token scopes** (not read-only) | One login for `gh`, git, and agents | Log `gh` in with a fine-grained PAT scoped to specific repos. Set `GITHUB_READ_ONLY=1` or a narrower `GITHUB_TOOLSETS` for the MCP. Protect `main` with branch protection / required reviews |
 | **Fetch MCP ignores robots.txt and can reach loopback and lab DNS** (`127.0.0.1`, `ollama`, `sandbox-dind`) | Agent doc fetches; same reach as `curl` in a terminal, so not a new hole | Egress policy (above) covers it too |
-| **`seccomp=unconfined` on code-box** | The linuxserver KasmVNC base recommends it: modern GUI and Electron apps (Cursor, VS Code, Firefox) use syscalls that older Docker/libseccomp default profiles block. It is not there for a Chromium sandbox; those run with `--no-sandbox` (below) | On a current Docker Engine, try removing it with an override (see [Testing seccomp](#testing-seccomp)) |
+| **Optional unconfined seccomp compatibility overlay** | Some older Docker/libseccomp combinations can block GUI or Electron syscalls. It is not needed for Chromium's sandbox; those processes run with `--no-sandbox` (below) | Keep Docker's default profile. Select `--seccomp-unconfined` only after confirming a specific compatibility failure, then update Docker/libseccomp and retest |
 | **Electron apps and Playwright Chromium run with `--no-sandbox`** | Chromium's own sandbox can't run in this container | Treat the browser as running at the desktop user's privilege. Don't browse untrusted sites with credentials loaded |
 | **Passwordless `sudo` for the desktop user** (from the linuxserver base image) | Agents install packages ad hoc | Assume the agent is root *inside* code-box. The container is the boundary |
-| **code-box runs under the default `runc`**, not Sysbox | KasmVNC/Electron compatibility. Only DinD needs Sysbox | Combined with root and unconfined seccomp, this is the weakest boundary. Keep the host kernel patched |
+| **code-box runs under the default `runc`**, not Sysbox | KasmVNC/Electron compatibility. Only DinD needs Sysbox | Combined with passwordless root inside the container, this remains a weaker boundary than the Sysbox DinD sibling. Keep the host kernel patched |
 | **KasmVNC is plain HTTP on all interfaces** (port 3000) | Easy localhost and LAN use | On anything beyond a single workstation, put an [HTTPS reverse proxy](deployment_examples.md) in front and/or bind to loopback with a `docker-compose.override.yaml` (`ports: ["127.0.0.1:3000:3000"]`) |
 | **Nested containers can reach code-box on `sandbox-net`** | code-box must join `sandbox-net` to reach the daemon | Anything listening on `0.0.0.0` inside code-box (including KasmVNC :3000, which needs its login) is reachable from nested containers. Bind agent dev servers to `127.0.0.1` |
 | **`/workspace` is shared read-write with DinD** | Compose bind mounts must resolve on the daemon | Nested containers can modify source and leave root-owned files. Review diffs before pushing |
@@ -96,18 +97,19 @@ flowchart LR
 
 ## Testing seccomp
 
-To check whether your host needs `seccomp=unconfined`, run code-box with Docker's default profile:
-
-```yaml
-# docker-compose.override.yaml (gitignored) — picked up by plain `docker compose up`
-services:
-  code-box:
-    security_opt: !override []
-```
+The base configuration uses Docker's default seccomp profile. Verify the shipped image and containment controls without touching operator state:
 
 ```bash
-docker compose up -d --force-recreate code-box
-docker exec code-box grep Seccomp /proc/1/status   # expect "Seccomp: 2"
+scripts/test-containment.sh
 ```
 
-Then check that the desktop loads, Cursor, `code`, and Firefox open, Playwright MCP navigates, and `claude` / `opencode` start. If anything crashes, delete the override. `scripts/up.sh` passes explicit `-f` flags and ignores the override, so test with plain `docker compose`.
+The test reports `Seccomp: 2` for the disposable desktop. It also verifies that the explicit compatibility overlay changes a disposable process to `Seccomp: 0`.
+
+If a supported desktop tool has a confirmed default-profile incompatibility on a specific host, use the exception only for that host:
+
+```bash
+scripts/up.sh --seccomp-unconfined
+docker exec code-box grep Seccomp /proc/1/status   # expect "Seccomp: 0"
+```
+
+For a manual Compose invocation, apply [`docker-compose.seccomp-unconfined.yaml`](../docker-compose.seccomp-unconfined.yaml) explicitly with `-f`. Retest after updating Docker or libseccomp, then remove the exception. The compatibility overlay is never selected implicitly.
